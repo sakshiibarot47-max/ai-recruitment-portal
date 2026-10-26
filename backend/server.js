@@ -14,3 +14,5 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Recruitm
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const uploadRoutes = require('./routes/upload');
+app.use('/upload', uploadRoutes);
