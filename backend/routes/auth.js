@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../database');
+const jwt = require('jsonwebtoken');
 
 const router = express.Router();
 
@@ -31,4 +32,34 @@ router.post('/register', (req, res) => {
   res.status(201).json({ message: 'Registered successfully', userId: result.lastInsertRowid });
 });
 
+// POST /auth/login
+router.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password are required' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (!user) {
+    return res.status(401).json({ message: 'Invalid email or password' });
+  }
+
+  const passwordMatches = bcrypt.compareSync(password, user.password);
+  if (!passwordMatches) {
+    return res.status(401).json({ message: 'Invalid email or password' });
+  }
+
+  const token = jwt.sign(
+    { id: user.id, role: user.role },
+    process.env.JWT_SECRET,
+    { expiresIn: '1d' }
+  );
+
+  res.json({
+    message: 'Login successful',
+    token,
+    user: { id: user.id, name: user.name, email: user.email, role: user.role }
+  });
+});
 module.exports = router;
