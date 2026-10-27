@@ -17,6 +17,8 @@ app.use('/applications', applicationRoutes);
 app.get('/', (req, res) => res.send('Backend is running'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Recruitment API is alive' }));
 
+const applyRoutes = require('./routes/apply');
+app.use('/', applyRoutes);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 const uploadRoutes = require('./routes/upload');
