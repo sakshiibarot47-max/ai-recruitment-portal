@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { PDFParse } = require('pdf-parse');
+const { calculateMatch } = require('../utils/matcher');
 
 const router = express.Router();
 
@@ -35,7 +37,7 @@ router.post(
   verifyToken,
   requireRole('candidate'),
   upload.single('resume'),
-  (req, res) => {
+  async (req, res) => {
     const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
 
     if (!job) {
@@ -54,13 +56,27 @@ router.post(
       return res.status(409).json({ message: 'You already applied to this job' });
     }
 
+    // Read the text inside the PDF and calculate the match score
+    let match = { score: null, matched: [], missing: [] };
+    try {
+      const parser = new PDFParse({ data: fs.readFileSync(req.file.path) });
+      const pdfData = await parser.getText();
+      await parser.destroy();
+      match = calculateMatch(pdfData.text, job.skills);
+    } catch (err) {
+      console.log('Could not read the PDF text:', err.message);
+    }
+
     const result = db
-      .prepare('INSERT INTO applications (job_id, candidate_id, resume_path) VALUES (?, ?, ?)')
-      .run(job.id, req.user.id, 'uploads/' + req.file.filename);
+      .prepare('INSERT INTO applications (job_id, candidate_id, resume_path, match_score) VALUES (?, ?, ?, ?)')
+      .run(job.id, req.user.id, 'uploads/' + req.file.filename, match.score);
 
     res.status(201).json({
       message: 'Application submitted',
-      applicationId: result.lastInsertRowid
+      applicationId: result.lastInsertRowid,
+      matchScore: match.score,
+      matchedSkills: match.matched,
+      missingSkills: match.missing
     });
   }
 );
