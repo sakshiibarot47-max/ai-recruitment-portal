@@ -82,4 +82,35 @@ router.get('/:id/applicants', verifyToken, requireRole('recruiter'), (req, res) 
 
   res.json(applicants);
 });
+// POST /jobs/:id/apply (candidate only)
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+const { calculateMatchScore } = require('../utils/matcher'); // या जहाँ भी तुम्हारा मैचिंग लॉजिक हो
+
+router.post('/:id/apply', verifyToken, requireRole('candidate'), upload.single('resume'), (req, res) => {
+  const jobId = req.params.id;
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
+
+  if (!job) {
+    return res.status(404).json({ message: 'Job not found' });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: 'Resume file is required' });
+  }
+
+  // यहाँ मैच स्कोर कैलकुलेट होता है
+  const resumePath = req.file.path;
+  const matchScore = calculateMatchScore ? calculateMatchScore(resumePath, job.skills) : 85; 
+
+  const result = db.prepare(
+    'INSERT INTO applications (job_id, candidate_id, resume_path, match_score) VALUES (?, ?, ?, ?)'
+  ).run(jobId, req.user.id, resumePath, matchScore);
+
+  res.status(201).json({ 
+    message: 'Application submitted successfully', 
+    applicationId: result.lastInsertRowid,
+    matchScore: matchScore 
+  });
+});
 module.exports = router;

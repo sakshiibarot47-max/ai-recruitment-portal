@@ -11,7 +11,7 @@ function verifyToken(req, res, next) {
   const token = header.split(' ')[1];
 
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = jwt.verify(token, 'mysecretkey12345');
     next();
   } catch (err) {
       console.log('JWT error:', err.message);
