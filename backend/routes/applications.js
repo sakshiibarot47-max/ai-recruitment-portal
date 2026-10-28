@@ -85,4 +85,19 @@ router.get('/:id/resume', verifyToken, requireRole('recruiter'), (req, res) => {
   res.sendFile(filePath);
 });
 
+// GET /applications/my-applications (Candidate only)
+router.get('/my-applications', verifyToken, requireRole('candidate'), (req, res) => {
+    const candidate_id = req.user.id;
+
+    const applications = db.prepare(`
+        SELECT a.id AS application_id, j.title, j.company, j.location, 
+               a.status, a.match_score, a.applied_at
+        FROM applications a
+        JOIN jobs j ON a.job_id = j.id
+        WHERE a.candidate_id = ?
+        ORDER BY a.applied_at DESC
+    `).all(candidate_id);
+
+    res.json(applications);
+});
 module.exports = router;
