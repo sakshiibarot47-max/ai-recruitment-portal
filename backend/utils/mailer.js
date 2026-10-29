@@ -1,53 +1,61 @@
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
-let transporterPromise = null;
+async function sendMail(options) {
+  const { to, email, subject, text, message } = options || {};
+  const recipient = to || email;
+  const body = text || message;
 
-// Creates the mail connection once and reuses it.
-// - If SMTP_HOST is set in .env, it uses that real mail server (Mailtrap, Gmail...).
-// - Otherwise it uses a free Ethereal test inbox (no signup), and prints a preview link.
-function getTransporter() {
-  if (!transporterPromise) {
-    transporterPromise = (async () => {
-      if (process.env.SMTP_HOST) {
-        const port = Number(process.env.SMTP_PORT) || 587;
-        return nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port,
-          secure: port === 465,
-          auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-        });
-      }
-      const account = await nodemailer.createTestAccount();
-      return nodemailer.createTransport({
-        host: 'smtp.ethereal.email',
-        port: 587,
-        secure: false,
-        auth: { user: account.user, pass: account.pass },
-      });
-    })();
-  }
-  return transporterPromise;
+  // Generate a gorgeous local HTML preview file so you can open it directly in your browser
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${subject}</title>
+      <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 40px; }
+        .email-container { max-width: 600px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .header { border-bottom: 2px solid #007bff; padding-bottom: 10px; margin-bottom: 20px; }
+        .header h2 { color: #007bff; margin: 0; }
+        .meta { font-size: 14px; color: #555; margin-bottom: 20px; }
+        .body-content { font-size: 16px; color: #333; line-height: 1.6; white-space: pre-line; }
+        .footer { margin-top: 30px; font-size: 12px; color: #888; text-align: center; border-top: 1px solid #eee; padding-top: 15px; }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        <div class="header">
+          <h2>HireAI Recruitment Portal</h2>
+        </div>
+        <div class="meta">
+          <strong>To:</strong> ${recipient}<br>
+          <strong>Subject:</strong> ${subject}
+        </div>
+        <div class="body-content">${body}</div>
+        <div class="footer">
+          <p>This is a simulated local test email for your recruitment application portal.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Save to a local html file in your backend folder
+  const filePath = path.join(__dirname, '..', 'email-preview.html');
+  fs.writeFileSync(filePath, htmlContent);
+
+  console.log('--------------------------------------------------');
+  console.log('📧 Email Generated Successfully!');
+  console.log('📂 Local Preview File saved at:');
+  console.log(filePath);
+  console.log('--------------------------------------------------');
+
+  return { messageId: 'local-' + Date.now() };
 }
 
-// Sends one email. It never crashes the API: if sending fails, it only prints the reason.
-async function sendMail({ to, subject, text }) {
-  try {
-    const transporter = await getTransporter();
-    const info = await transporter.sendMail({
-      from: process.env.MAIL_FROM || '"HireAI Recruitment" <no-reply@hireai.test>',
-      to,
-      subject,
-      text,
-    });
+sendMail.sendMail = sendMail;
+sendMail.sendEmail = sendMail;
 
-    const previewUrl = nodemailer.getTestMessageUrl(info);
-    if (previewUrl) console.log('Email preview link:', previewUrl);
-    else console.log('Email sent to', to);
-    return info;
-  } catch (err) {
-    console.log('Email could not be sent:', err.message);
-    return null;
-  }
-}
-
-module.exports = { sendMail };
+module.exports = sendMail;
