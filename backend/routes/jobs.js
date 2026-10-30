@@ -145,4 +145,29 @@ router.delete('/:id', verifyToken, requireRole('recruiter'), (req, res) => {
   }
 });
 
+// GET /jobs/:id/applicants (Recruiter only)
+router.get('/:id/applicants', verifyToken, requireRole('recruiter'), (req, res) => {
+  const jobId = req.params.id;
+
+  // Verify the job belongs to this recruiter
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
+  if (!job) {
+    return res.status(404).json({ message: 'Job not found' });
+  }
+  if (job.recruiter_id !== req.user.id) {
+    return res.status(403).json({ message: 'Access denied' });
+  }
+
+  // Fetch applications for this job with candidate details
+  const applicants = db.prepare(
+    'SELECT a.id AS application_id, a.status, a.match_score, a.resume_path, ' +
+    'u.id AS candidate_id, u.name, u.email ' +
+    'FROM applications a ' +
+    'JOIN users u ON u.id = a.candidate_id ' +
+    'WHERE a.job_id = ?'
+  ).all(jobId);
+
+  res.json(applicants);
+});
+
 module.exports = router;

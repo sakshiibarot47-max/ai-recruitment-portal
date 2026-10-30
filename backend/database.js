@@ -33,6 +33,16 @@ CREATE TABLE IF NOT EXISTS applications (
   FOREIGN KEY (job_id) REFERENCES jobs(id),
   FOREIGN KEY (candidate_id) REFERENCES users(id)
 );
+CREATE TABLE IF NOT EXISTS interviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  application_id INTEGER NOT NULL,
+  scheduled_at TEXT NOT NULL,
+  mode TEXT DEFAULT 'Online',
+  location TEXT,
+  notes TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (application_id) REFERENCES applications(id)
+);
 `);
 
 console.log('Database ready: 3 tables created');
