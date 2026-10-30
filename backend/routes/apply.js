@@ -6,6 +6,7 @@ const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { PDFParse } = require('pdf-parse');
 const { calculateMatch } = require('../utils/matcher');
+const { analyzeResume } = require('../utils/ai');
 const sendMail = require('../utils/mailer');
 
 const router = express.Router();
@@ -55,19 +56,19 @@ router.post(
       return res.status(409).json({ message: 'You already applied to this job' });
     }
 
-    let match = { score: null, matched: [], missing: [] };
+    let match = { score: null, matched: [], missing: [], summary: null, method: 'keyword' };
     try {
       const parser = new PDFParse({ data: fs.readFileSync(req.file.path) });
       const pdfData = await parser.getText();
       await parser.destroy();
-      match = calculateMatch(pdfData.text, job.skills);
+      match = await analyzeResume(pdfData.text, job);
     } catch (err) {
       console.log('Could not read the PDF text:', err.message);
     }
 
     const result = db
-      .prepare('INSERT INTO applications (job_id, candidate_id, resume_path, match_score) VALUES (?, ?, ?, ?)')
-      .run(job.id, req.user.id, 'uploads/' + req.file.filename, match.score);
+      .prepare('INSERT INTO applications (job_id, candidate_id, resume_path, match_score, ai_summary) VALUES (?, ?, ?, ?, ?)')
+      .run(job.id, req.user.id, 'uploads/' + req.file.filename, match.score, match.summary || null);
 
     // --- TRIGGER CANDIDATE CONFIRMATION EMAIL ---
     try {
@@ -87,13 +88,15 @@ router.post(
     } catch (emailErr) {
       console.log('❌ Email dispatch error caught:', emailErr.message);
     }
-
+console.log('Final match object before sending:', match);
     res.status(201).json({
       message: 'Application submitted and confirmation email sent!',
       applicationId: result.lastInsertRowid,
       matchScore: match.score,
       matchedSkills: match.matched,
-      missingSkills: match.missing
+      missingSkills: match.missing,
+      matchMethod: match.method || null,
+      aiSummary: match.summary || null
     });
   }
 );
