@@ -34,6 +34,10 @@ CREATE TABLE IF NOT EXISTS applications (
   FOREIGN KEY (candidate_id) REFERENCES users(id)
 );
 `);
-
+try {
+  db.exec('ALTER TABLE applications ADD COLUMN ai_summary TEXT');
+} catch (err) {
+  // column already exists
+}
 console.log('Database ready: 3 tables created');
 module.exports = db;
