@@ -1,173 +1,152 @@
 const express = require('express');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
-const { PDFParse } = require('pdf-parse');
-const { calculateMatch } = require('../utils/matcher');
-const sendMail = require('../utils/mailer'); // ✅ Make sure mailer is imported
 
 const router = express.Router();
 
-const uploadDir = path.join(__dirname, '..', 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + '-' + file.originalname.replace(/\s+/g, '_'))
-});
-
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype === 'application/pdf') cb(null, true);
-  else cb(new Error('Only PDF files are allowed'));
-};
-
-const upload = multer({
-  storage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }
-});
-
-// GET /jobs - List all jobs
-router.get('/', (req, res) => {
-  try {
-    const jobs = db.prepare('SELECT * FROM jobs ORDER BY id DESC').all();
-    res.json(jobs);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
-
-// POST /jobs - Recruiter creates a job
+// POST /jobs  (recruiter only)
 router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
-  try {
-    const { title, company, location, type, skills, description } = req.body;
-    if (!title || !company) {
-      return res.status(400).json({ message: 'Title and company are required' });
-    }
+  const { title, company, location, type, skills, description } = req.body || {};
 
-    const result = db
-      .prepare('INSERT INTO jobs (title, company, location, type, skills, description, recruiter_id) VALUES (?, ?, ?, ?, ?, ?, ?)')
-      .run(title, company, location, type, skills, description, req.user.id);
-
-    res.status(201).json({
-      message: 'Job created successfully',
-      jobId: result.lastInsertRowid
-    });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  if (!title || !company || !skills || !description) {
+    return res.status(400).json({ message: 'title, company, skills and description are required' });
   }
+
+  const result = db
+    .prepare(
+      'INSERT INTO jobs (title, company, location, type, skills, description, recruiter_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    )
+    .run(title, company, location || null, type || null, skills, description, req.user.id);
+
+  res.status(201).json({ message: 'Job posted', jobId: result.lastInsertRowid });
 });
 
-// POST /jobs/:id/apply - Candidate applies to a job (with resume & email notification)
-router.post(
-  '/:id/apply',
-  verifyToken,
-  requireRole('candidate'),
-  upload.single('resume'),
-  async (req, res) => {
-    try {
-      const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+// GET /jobs?search=&location=&type=  (public)
+router.get('/', (req, res) => {
+  const { search, location, type } = req.query;
 
-      if (!job) {
-        if (req.file) fs.unlinkSync(req.file.path);
-        return res.status(404).json({ message: 'Job not found' });
-      }
-      if (!req.file) {
-        return res.status(400).json({ message: 'Please upload a PDF resume' });
-      }
+  let sql = 'SELECT * FROM jobs WHERE 1=1';
+  const params = [];
 
-      const already = db
-        .prepare('SELECT id FROM applications WHERE job_id = ? AND candidate_id = ?')
-        .get(job.id, req.user.id);
-      if (already) {
-        fs.unlinkSync(req.file.path);
-        return res.status(409).json({ message: 'You already applied to this job' });
-      }
-
-      let match = { score: null, matched: [], missing: [] };
-      try {
-        const parser = new PDFParse({ data: fs.readFileSync(req.file.path) });
-        const pdfData = await parser.getText();
-        await parser.destroy();
-        match = calculateMatch(pdfData.text, job.skills);
-      } catch (err) {
-        console.log('Could not read the PDF text:', err.message);
-      }
-
-      const result = db
-        .prepare('INSERT INTO applications (job_id, candidate_id, resume_path, match_score) VALUES (?, ?, ?, ?)')
-        .run(job.id, req.user.id, 'uploads/' + req.file.filename, match.score);
-
-      // --- TRIGGER CANDIDATE CONFIRMATION EMAIL ---
-      try {
-        const candidate = db.prepare('SELECT name, email FROM users WHERE id = ?').get(req.user.id);
-        if (candidate && candidate.email) {
-          await sendMail({
-            to: candidate.email,
-            subject: `Application Received: ${job.title} at ${job.company}`,
-            text: `Hello ${candidate.name},\n\nYour application for "${job.title}" has been successfully submitted.\nOur team will review your qualifications shortly.\n\nBest regards,\nRecruitment Team`
-          });
-          console.log('📧 Confirmation email successfully sent to:', candidate.email);
-        }
-      } catch (emailErr) {
-        console.log('Email dispatch error:', emailErr.message);
-      }
-
-      res.status(201).json({
-        message: 'Application submitted successfully',
-        applicationId: result.lastInsertRowid,
-        matchScore: match.score,
-        matchedSkills: match.matched,
-        missingSkills: match.missing
-      });
-    } catch (err) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      res.status(500).json({ message: err.message });
-    }
+  if (search) {
+    sql += ' AND (title LIKE ? OR skills LIKE ? OR company LIKE ?)';
+    const s = '%' + search + '%';
+    params.push(s, s, s);
   }
-);
-
-// DELETE /jobs/:id - Recruiter deletes a job
-router.delete('/:id', verifyToken, requireRole('recruiter'), (req, res) => {
-  try {
-    const job = db.prepare('SELECT * FROM jobs WHERE id = ? AND recruiter_id = ?').get(req.params.id, req.user.id);
-    if (!job) {
-      return res.status(404).json({ message: 'Job not found or unauthorized' });
-    }
-
-    db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
-    res.json({ message: 'Job deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  if (location) {
+    sql += ' AND location LIKE ?';
+    params.push('%' + location + '%');
   }
+  if (type) {
+    sql += ' AND type = ?';
+    params.push(type);
+  }
+
+  sql += ' ORDER BY id DESC';
+
+  const jobs = db.prepare(sql).all(...params);
+  res.json(jobs);
 });
 
-// GET /jobs/:id/applicants (Recruiter only)
+// GET /jobs/:id  (public)
+router.get('/:id', (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+
+  if (!job) {
+    return res.status(404).json({ message: 'Job not found' });
+  }
+  res.json(job);
+});
+
+// GET /jobs/:id/applicants  (recruiter only, only own job, best match first)
 router.get('/:id/applicants', verifyToken, requireRole('recruiter'), (req, res) => {
-  const jobId = req.params.id;
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
 
-  // Verify the job belongs to this recruiter
-  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(jobId);
   if (!job) {
     return res.status(404).json({ message: 'Job not found' });
   }
   if (job.recruiter_id !== req.user.id) {
-    return res.status(403).json({ message: 'Access denied' });
+    return res.status(403).json({ message: 'This is not your job' });
   }
 
-  // Fetch applications for this job with candidate details
-  const applicants = db.prepare(
-    'SELECT a.id AS application_id, a.status, a.match_score, a.resume_path, ' +
-    'u.id AS candidate_id, u.name, u.email ' +
-    'FROM applications a ' +
-    'JOIN users u ON u.id = a.candidate_id ' +
-    'WHERE a.job_id = ?'
-  ).all(jobId);
+  const applicants = db
+    .prepare(
+      `SELECT a.id AS application_id, u.id AS candidate_id, u.name, u.email, a.resume_path,
+              a.status, a.match_score, a.ai_summary, a.applied_at
+       FROM applications a
+       JOIN users u ON u.id = a.candidate_id
+       WHERE a.job_id = ?
+       ORDER BY a.match_score DESC, a.applied_at DESC`
+    )
+    .all(req.params.id);
 
   res.json(applicants);
+});
+
+// PUT /jobs/:id  (recruiter only, only own job). Send only the fields you want to change.
+router.put('/:id', verifyToken, requireRole('recruiter'), (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+
+  if (!job) {
+    return res.status(404).json({ message: 'Job not found' });
+  }
+  if (job.recruiter_id !== req.user.id) {
+    return res.status(403).json({ message: 'This is not your job' });
+  }
+
+  const body = req.body || {};
+  const updated = {
+    title: body.title !== undefined ? body.title : job.title,
+    company: body.company !== undefined ? body.company : job.company,
+    location: body.location !== undefined ? body.location : job.location,
+    type: body.type !== undefined ? body.type : job.type,
+    skills: body.skills !== undefined ? body.skills : job.skills,
+    description: body.description !== undefined ? body.description : job.description,
+  };
+
+  // These four cannot be empty
+  for (const field of ['title', 'company', 'skills', 'description']) {
+    if (typeof updated[field] !== 'string' || updated[field].trim() === '') {
+      return res.status(400).json({ message: field + ' cannot be empty' });
+    }
+  }
+
+  db.prepare(
+    'UPDATE jobs SET title = ?, company = ?, location = ?, type = ?, skills = ?, description = ? WHERE id = ?'
+  ).run(
+    updated.title.trim(),
+    updated.company.trim(),
+    updated.location || null,
+    updated.type || null,
+    updated.skills.trim(),
+    updated.description.trim(),
+    req.params.id
+  );
+
+  const saved = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+  res.json({ message: 'Job updated', job: saved });
+});
+
+// DELETE /jobs/:id  (recruiter only, only own job, only if nobody has applied)
+router.delete('/:id', verifyToken, requireRole('recruiter'), (req, res) => {
+  const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
+
+  if (!job) {
+    return res.status(404).json({ message: 'Job not found' });
+  }
+  if (job.recruiter_id !== req.user.id) {
+    return res.status(403).json({ message: 'This is not your job' });
+  }
+
+  const count = db
+    .prepare('SELECT COUNT(*) AS total FROM applications WHERE job_id = ?')
+    .get(req.params.id).total;
+  if (count > 0) {
+    return res.status(409).json({ message: 'This job has applications and cannot be deleted' });
+  }
+
+  db.prepare('DELETE FROM jobs WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Job deleted' });
 });
 
 module.exports = router;

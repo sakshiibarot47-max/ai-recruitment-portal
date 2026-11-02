@@ -49,5 +49,11 @@ try {
 } catch (err) {
   // column already exists
 }
+// Column for the AI summary (safe to run many times)
+try {
+  db.exec('ALTER TABLE applications ADD COLUMN ai_summary TEXT');
+} catch (err) {
+  // the column already exists
+}
 console.log('Database ready: 3 tables created');
 module.exports = db;

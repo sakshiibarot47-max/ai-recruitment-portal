@@ -5,7 +5,6 @@ const fs = require('fs');
 const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { PDFParse } = require('pdf-parse');
-const { calculateMatch } = require('../utils/matcher');
 const { analyzeResume } = require('../utils/ai');
 const sendMail = require('../utils/mailer');
 
@@ -31,7 +30,7 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 }
 });
 
-// POST /jobs/:id/apply
+// POST /jobs/:id/apply  (candidate only, form-data, field name: resume)
 router.post(
   '/jobs/:id/apply',
   verifyToken,
@@ -56,7 +55,8 @@ router.post(
       return res.status(409).json({ message: 'You already applied to this job' });
     }
 
-    let match = { score: null, matched: [], missing: [], summary: null, method: 'keyword' };
+    // Read the PDF text and calculate the match score (AI, or keyword backup)
+    let match = { score: null, matched: [], missing: [], summary: null, method: null };
     try {
       const parser = new PDFParse({ data: fs.readFileSync(req.file.path) });
       const pdfData = await parser.getText();
@@ -70,27 +70,26 @@ router.post(
       .prepare('INSERT INTO applications (job_id, candidate_id, resume_path, match_score, ai_summary) VALUES (?, ?, ?, ?, ?)')
       .run(job.id, req.user.id, 'uploads/' + req.file.filename, match.score, match.summary || null);
 
-    // --- TRIGGER CANDIDATE CONFIRMATION EMAIL ---
+    // Email the candidate that the application was received
     try {
       const candidate = db.prepare('SELECT name, email FROM users WHERE id = ?').get(req.user.id);
-      console.log('-> Candidate found for email:', candidate);
-
       if (candidate && candidate.email) {
-        console.log('-> Triggering sendMail function...');
         await sendMail({
           to: candidate.email,
-          subject: `Application Received: ${job.title} at ${job.company}`,
-          text: `Hello ${candidate.name},\n\nYour application for "${job.title}" has been successfully submitted.\nOur team will review your qualifications shortly.\n\nBest regards,\nRecruitment Team`
+          subject: 'Application received: ' + job.title + ' at ' + job.company,
+          text:
+            'Hello ' + candidate.name + ',\n\n' +
+            'Your application for "' + job.title + '" at ' + job.company + ' has been submitted.\n' +
+            'The recruiter will review it and update you soon.\n\n' +
+            'Best regards,\nHireAI Recruitment'
         });
-      } else {
-        console.log('-> Warning: Candidate email not found in database!');
       }
     } catch (emailErr) {
-      console.log('❌ Email dispatch error caught:', emailErr.message);
+      console.log('Email could not be sent:', emailErr.message);
     }
-console.log('Final match object before sending:', match);
+
     res.status(201).json({
-      message: 'Application submitted and confirmation email sent!',
+      message: 'Application submitted',
       applicationId: result.lastInsertRowid,
       matchScore: match.score,
       matchedSkills: match.matched,
@@ -101,6 +100,7 @@ console.log('Final match object before sending:', match);
   }
 );
 
+// GET /my/applications  (candidate only)
 router.get('/my/applications', verifyToken, requireRole('candidate'), (req, res) => {
   const rows = db
     .prepare(
@@ -112,6 +112,7 @@ router.get('/my/applications', verifyToken, requireRole('candidate'), (req, res)
   res.json(rows);
 });
 
+// Clear message for upload errors (wrong file type, too big)
 router.use((err, req, res, next) => {
   res.status(400).json({ message: err.message });
 });
