@@ -41,6 +41,10 @@ app.use('/saved-jobs', savedRoutes);
 const withdrawRoutes = require('./routes/withdraw');
 app.use('/my', withdrawRoutes);
 
+// Day 7 Task Routes (Notifications API)
+const notificationRoutes = require('./routes/notifications');
+app.use('/notifications', notificationRoutes);
+
 // Health Check Routes
 app.get('/', (req, res) => res.send('Backend is running'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Recruitment API is alive' }));
