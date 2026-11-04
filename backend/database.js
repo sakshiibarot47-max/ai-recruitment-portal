@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS applications (
   FOREIGN KEY (job_id) REFERENCES jobs(id),
   FOREIGN KEY (candidate_id) REFERENCES users(id)
 );
+
 CREATE TABLE IF NOT EXISTS interviews (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   application_id INTEGER NOT NULL,
@@ -43,17 +44,24 @@ CREATE TABLE IF NOT EXISTS interviews (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (application_id) REFERENCES applications(id)
 );
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  message TEXT,
+  type TEXT,
+  is_read INTEGER DEFAULT 0,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id)
+);
 `);
+
+// Column for the AI summary (safe to run many times)
 try {
   db.exec('ALTER TABLE applications ADD COLUMN ai_summary TEXT');
 } catch (err) {
   // column already exists
 }
-// Column for the AI summary (safe to run many times)
-try {
-  db.exec('ALTER TABLE applications ADD COLUMN ai_summary TEXT');
-} catch (err) {
-  // the column already exists
-}
-console.log('Database ready: 3 tables created');
+
+console.log('Database ready: Tables created successfully');
 module.exports = db;

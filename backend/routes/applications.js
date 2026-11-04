@@ -1,3 +1,4 @@
+const { createNotification } = require('../middleware/notificationHelper');
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
@@ -27,7 +28,7 @@ router.put('/:id/status', verifyToken, requireRole('recruiter'), (req, res) => {
 
   const application = db
     .prepare(
-      'SELECT a.id, j.recruiter_id FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ?'
+      'SELECT a.id, a.candidate_id, j.recruiter_id, j.title, j.company FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.id = ?'
     )
     .get(req.params.id);
 
@@ -39,6 +40,17 @@ router.put('/:id/status', verifyToken, requireRole('recruiter'), (req, res) => {
   }
 
   db.prepare('UPDATE applications SET status = ? WHERE id = ?').run(status, req.params.id);
+
+  // Trigger in-app notification for the candidate
+  try {
+    createNotification(
+      application.candidate_id,
+      `Your application status for "${application.title}" at ${application.company || 'Company'} has been updated to: ${status}`,
+      'STATUS_UPDATE'
+    );
+  } catch (notifErr) {
+    console.log('Notification could not be created:', notifErr.message);
+  }
 
   // Email the candidate about the new status (the API does not wait for the email)
   const info = db
@@ -100,4 +112,5 @@ router.get('/my-applications', verifyToken, requireRole('candidate'), (req, res)
 
     res.json(applications);
 });
+
 module.exports = router;

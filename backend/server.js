@@ -46,6 +46,8 @@ app.use('/upload', uploadRoutes);
 // Recruiter Dashboard Routes
 const recruiterRoutes = require('./routes/recruiter');
 app.use('/recruiter', recruiterRoutes);
+const candidateStatsRoutes = require('./routes/candidateStats');
+app.use('/candidate', candidateStatsRoutes);
 
 // Health Check Routes
 app.get('/', (req, res) => res.send('Backend is running'));

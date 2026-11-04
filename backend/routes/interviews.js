@@ -1,3 +1,4 @@
+const { createNotification } = require('../middleware/notificationHelper');
 const express = require('express');
 const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
@@ -36,7 +37,7 @@ router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
   // The application must exist and belong to one of this recruiter's jobs
   const application = db
     .prepare(
-      'SELECT a.id, j.recruiter_id, j.title, j.company, u.name, u.email ' +
+      'SELECT a.id, a.candidate_id, j.recruiter_id, j.title, j.company, u.name, u.email ' +
       'FROM applications a JOIN jobs j ON j.id = a.job_id JOIN users u ON u.id = a.candidate_id ' +
       'WHERE a.id = ?'
     )
@@ -74,6 +75,17 @@ router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
 
   // Move the application to the Interview stage
   db.prepare('UPDATE applications SET status = ? WHERE id = ?').run('Interview', applicationId);
+
+  // Trigger in-app notification for the candidate
+  try {
+    createNotification(
+      application.candidate_id,
+      `An interview has been scheduled for your application to "${application.title}" at ${application.company || 'Company'} on ${scheduledAt}.`,
+      'INTERVIEW'
+    );
+  } catch (notifErr) {
+    console.log('Notification could not be created:', notifErr.message);
+  }
 
   // Email the candidate the interview details
   sendMail({

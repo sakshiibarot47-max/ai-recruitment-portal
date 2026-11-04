@@ -1,3 +1,4 @@
+const { createNotification } = require('../middleware/notificationHelper');
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
@@ -69,6 +70,17 @@ router.post(
     const result = db
       .prepare('INSERT INTO applications (job_id, candidate_id, resume_path, match_score, ai_summary) VALUES (?, ?, ?, ?, ?)')
       .run(job.id, req.user.id, 'uploads/' + req.file.filename, match.score, match.summary || null);
+
+    // Trigger in-app notification for the candidate
+    try {
+      createNotification(
+        req.user.id,
+        `Your application for "${job.title}" at ${job.company || 'Company'} has been submitted successfully.`,
+        'APPLICATION'
+      );
+    } catch (notifErr) {
+      console.log('Notification could not be created:', notifErr.message);
+    }
 
     // Email the candidate that the application was received
     try {
