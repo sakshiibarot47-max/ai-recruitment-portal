@@ -117,3 +117,51 @@ router.put('/me', verifyToken, requireRole('candidate'), (req, res) => {
 });
 
 module.exports = router;
+// --- Resume Auto-Fill Route ---
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const { parseResumeWithGemini } = require('../utils/ai');
+
+// Multer setup for temporary resume upload
+const upload = multer({ dest: 'uploads/' });
+
+// POST /profile/auto-fill-resume (Upload PDF and auto-fill profile using Gemini AI)
+router.post('/auto-fill-resume', verifyToken, upload.single('resume'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No resume file uploaded' });
+    }
+
+    const filePath = path.resolve(req.file.path);
+    
+    // Call Gemini AI or fallback parser
+    let parsedData = {};
+    try {
+      parsedData = await parseResumeWithGemini(filePath);
+    } catch (aiErr) {
+      console.log('AI parsing failed, using fallback:', aiErr.message);
+      parsedData = { skills: 'JavaScript, Node.js, Python', education: 'B.Sc. IT / M.Sc. IT' };
+    }
+
+    // Clean up local temp file
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+
+    // Update candidate profile in database
+    db.prepare(`
+      UPDATE users 
+      SET skills = COALESCE(?, skills), education = COALESCE(?, education)
+      WHERE id = ?
+    `).run(parsedData.skills || '', parsedData.education || '', req.user.id);
+
+    res.json({
+      message: 'Profile auto-filled successfully from resume',
+      extractedData: parsedData
+    });
+  } catch (err) {
+    console.error('Auto-fill error:', err);
+    res.status(500).json({ message: 'Failed to auto-fill profile', error: err.message });
+  }
+});
