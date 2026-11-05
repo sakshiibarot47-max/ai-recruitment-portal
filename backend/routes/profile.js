@@ -1,8 +1,21 @@
 const express = require('express');
 const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const multer = require('multer');
+const fs = require('fs');
+const path = require('path');
+const cloudinary = require('cloudinary').v2;
 
 const router = express.Router();
+
+// Cloudinary configuration (agar .env में दिया गया है)
+if (process.env.CLOUDINARY_CLOUD_NAME) {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 // This table is created here, so database.js does not need to change
 db.exec(`
@@ -15,6 +28,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   education TEXT,
   experience TEXT,
   projects TEXT,
+  resume_url TEXT,
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id)
 );
@@ -52,7 +66,7 @@ function buildProfile(userId) {
   const user = db.prepare('SELECT name, email FROM users WHERE id = ?').get(userId);
   const row = db.prepare('SELECT * FROM profiles WHERE user_id = ?').get(userId) || {};
 
-  const profile = { name: user.name, email: user.email };
+  const profile = { name: user.name, email: user.email, resume_url: row.resume_url || '' };
   FIELDS.forEach((f) => {
     profile[f] = row[f] || '';
   });
@@ -116,24 +130,33 @@ router.put('/me', verifyToken, requireRole('candidate'), (req, res) => {
   res.json({ message: 'Profile saved', profile: buildProfile(req.user.id) });
 });
 
-module.exports = router;
-// --- Resume Auto-Fill Route ---
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
+// --- Resume Auto-Fill Route with Cloudinary Storage ---
+const upload = multer({ dest: 'uploads/' });
 const { parseResumeWithGemini } = require('../utils/ai');
 
-// Multer setup for temporary resume upload
-const upload = multer({ dest: 'uploads/' });
-
-// POST /profile/auto-fill-resume (Upload PDF and auto-fill profile using Gemini AI)
-router.post('/auto-fill-resume', verifyToken, upload.single('resume'), async (req, res) => {
+router.post('/auto-fill-resume', verifyToken, requireRole('candidate'), upload.single('resume'), async (req, res) => {
+  let filePath = null;
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No resume file uploaded' });
     }
 
-    const filePath = path.resolve(req.file.path);
+    filePath = path.resolve(req.file.path);
+    let resumeUrl = req.file.path; // Local fallback path
+
+    // Upload to Cloudinary if configured
+    if (process.env.CLOUDINARY_CLOUD_NAME && req.file.path) {
+      try {
+        const uploadResult = await cloudinary.uploader.upload(req.file.path, {
+          folder: 'ai-recruitment-portal/resumes',
+          resource_type: 'auto',
+          type: 'private' // Security for personal data
+        });
+        resumeUrl = uploadResult.secure_url;
+      } catch (cloudErr) {
+        console.error('Cloudinary upload failed, using local backup:', cloudErr.message);
+      }
+    }
     
     // Call Gemini AI or fallback parser
     let parsedData = {};
@@ -145,23 +168,41 @@ router.post('/auto-fill-resume', verifyToken, upload.single('resume'), async (re
     }
 
     // Clean up local temp file
-    if (fs.existsSync(filePath)) {
+    if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
-    // Update candidate profile in database
+    // Update candidate profile in 'profiles' table (Ensures 'skills' column updates properly)
     db.prepare(`
-      UPDATE users 
-      SET skills = COALESCE(?, skills), education = COALESCE(?, education)
-      WHERE id = ?
-    `).run(parsedData.skills || '', parsedData.education || '', req.user.id);
+      INSERT INTO profiles (user_id, skills, education, resume_url, updated_at)
+      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(user_id) DO UPDATE SET
+        skills = COALESCE(?, skills),
+        education = COALESCE(?, education),
+        resume_url = COALESCE(?, resume_url),
+        updated_at = CURRENT_TIMESTAMP
+    `).run(
+      req.user.id, 
+      parsedData.skills || '', 
+      parsedData.education || '', 
+      resumeUrl,
+      parsedData.skills || '', 
+      parsedData.education || '', 
+      resumeUrl
+    );
 
     res.json({
       message: 'Profile auto-filled successfully from resume',
-      extractedData: parsedData
+      extractedData: parsedData,
+      resume_url: resumeUrl
     });
   } catch (err) {
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
     console.error('Auto-fill error:', err);
     res.status(500).json({ message: 'Failed to auto-fill profile', error: err.message });
   }
 });
+
+module.exports = router;
