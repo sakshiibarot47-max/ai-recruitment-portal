@@ -48,6 +48,20 @@ router.get('/', (req, res) => {
   res.json(jobs);
 });
 
+// GET /jobs/filters  (public: the values for the filter dropdowns)
+// यह राउट हमेशा GET /jobs/:id से ऊपर होना चाहिए!
+router.get('/filters', (req, res) => {
+  const locations = db
+    .prepare("SELECT DISTINCT location FROM jobs WHERE location IS NOT NULL AND location != '' ORDER BY location COLLATE NOCASE")
+    .all()
+    .map((row) => row.location);
+  const types = db
+    .prepare("SELECT DISTINCT type FROM jobs WHERE type IS NOT NULL AND type != '' ORDER BY type COLLATE NOCASE")
+    .all()
+    .map((row) => row.type);
+  res.json({ locations, types });
+});
+
 // GET /jobs/:id  (public)
 router.get('/:id', (req, res) => {
   const job = db.prepare('SELECT * FROM jobs WHERE id = ?').get(req.params.id);
