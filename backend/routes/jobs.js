@@ -21,31 +21,66 @@ router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
   res.status(201).json({ message: 'Job posted', jobId: result.lastInsertRowid });
 });
 
-// GET /jobs?search=&location=&type=  (public)
+// GET /jobs?search=&location=&type=&sort=&page=&limit=  (public)
+// Always returns an array of jobs. The total number of matching jobs is sent in the
+// reply header X-Total-Count (and X-Total-Pages when page or limit is used).
 router.get('/', (req, res) => {
-  const { search, location, type } = req.query;
+  const { search, location, type, sort } = req.query;
 
-  let sql = 'SELECT * FROM jobs WHERE 1=1';
+  // Sorting: only these words are allowed (this keeps the SQL safe)
+  const SORTS = {
+    newest: 'id DESC',
+    oldest: 'id ASC',
+    title: 'title COLLATE NOCASE ASC',
+    company: 'company COLLATE NOCASE ASC',
+  };
+  if (sort !== undefined && !SORTS[sort]) {
+    return res.status(400).json({ message: 'sort must be one of: ' + Object.keys(SORTS).join(', ') });
+  }
+  const orderBy = SORTS[sort] || SORTS.newest;
+
+  // Filters
+  let where = ' WHERE 1=1';
   const params = [];
 
   if (search) {
-    sql += ' AND (title LIKE ? OR skills LIKE ? OR company LIKE ?)';
+    where += ' AND (title LIKE ? OR skills LIKE ? OR company LIKE ?)';
     const s = '%' + search + '%';
     params.push(s, s, s);
   }
   if (location) {
-    sql += ' AND location LIKE ?';
+    where += ' AND location LIKE ?';
     params.push('%' + location + '%');
   }
   if (type) {
-    sql += ' AND type = ?';
+    where += ' AND type = ?';
     params.push(type);
   }
 
-  sql += ' ORDER BY id DESC';
+  const total = db.prepare('SELECT COUNT(*) AS total FROM jobs' + where).get(...params).total;
+  res.set('X-Total-Count', String(total));
 
-  const jobs = db.prepare(sql).all(...params);
-  res.json(jobs);
+  let sql = 'SELECT * FROM jobs' + where + ' ORDER BY ' + orderBy;
+  const listParams = [...params];
+
+  // Pagination (only when page or limit is sent)
+  if (req.query.page !== undefined || req.query.limit !== undefined) {
+    const page = req.query.page === undefined ? 1 : Number(req.query.page);
+    const limit = req.query.limit === undefined ? 10 : Number(req.query.limit);
+
+    if (!Number.isInteger(page) || page < 1) {
+      return res.status(400).json({ message: 'page must be a whole number, 1 or more' });
+    }
+    if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
+      return res.status(400).json({ message: 'limit must be a whole number from 1 to 50' });
+    }
+
+    sql += ' LIMIT ? OFFSET ?';
+    listParams.push(limit, (page - 1) * limit);
+    res.set('X-Total-Pages', String(Math.max(1, Math.ceil(total / limit))));
+  }
+
+  res.json(db.prepare(sql).all(...listParams));
 });
 
 // GET /jobs/filters  (public: the values for the filter dropdowns)

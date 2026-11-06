@@ -14,7 +14,7 @@ const app = express();
 const { securityHeaders, authLimiter, notFound, errorHandler } = require('./middleware/security');
 
 app.use(securityHeaders);
-app.use(cors());
+app.use(cors({ exposedHeaders: ['X-Total-Count', 'X-Total-Pages'] }));
 app.use(express.json({ limit: '100kb' }));
 
 // Auth & Jobs & Applications Routes (Apply rate limits to auth login and register)
