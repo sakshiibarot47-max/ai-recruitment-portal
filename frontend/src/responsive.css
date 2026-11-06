@@ -1,0 +1,80 @@
+/* ==========================================================
+   Responsive layer - design same rehta hai, bas page ab
+   screen/window ki width ke saath adjust hota hai.
+   (Ye file sabse last me import hoti hai, isliye isko
+   hataane se pehle jaisa behaviour wapas aa jaata hai.)
+   ========================================================== */
+
+/* Pehle #root 1126px pe fixed tha (index.css) -> bade screen pe
+   side me khali jagah aur borders. Ab full screen width leta hai. */
+#root {
+  width: 100%;
+  max-width: 100%;
+  border-inline: 0;
+}
+
+/* Kuch bhi screen se bahar na nikle */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+img,
+video,
+svg,
+canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Lambe text / flex-grid children ko shrink hone do */
+.job-card,
+.dashboard-card,
+.content-card,
+.auth-card {
+  min-width: 0;
+}
+
+.job-card,
+.dashboard-card,
+.content-card,
+.auth-card,
+.jobs-header {
+  overflow-wrap: anywhere;
+}
+
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
+input[type="file"] {
+  width: 100%;
+}
+
+/* Table ho to apne andar scroll kare, page ko na toote */
+table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* Bahut chhoti screen (320-400px) */
+@media (max-width: 400px) {
+  .navbar {
+    width: calc(100% - 24px);
+    gap: 8px;
+  }
+  .nav-actions {
+    gap: 6px;
+  }
+}
+
+/* Bahut badi screen: content center me, background full width */
+@media (min-width: 1600px) {
+  .app {
+    width: 100%;
+  }
+}
