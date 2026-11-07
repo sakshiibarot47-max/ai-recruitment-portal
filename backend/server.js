@@ -28,13 +28,16 @@ app.use('/jobs', jobRoutes);
 
 const applicationRoutes = require('./routes/applications');
 app.use('/applications', applicationRoutes);
-
-// New Weekend Task Routes (Profile & Recommendations)
+// New Weekend Task Routes (Profile & Recommendations & Saved Jobs)
 const profileRoutes = require('./routes/profile');
 app.use('/profile', profileRoutes);
 
 const recommendationsRoutes = require('./routes/recommendations');
 app.use('/recommendations', recommendationsRoutes);
+
+// Yahan yeh line add karni hai:
+const savedRoutes = require('./routes/saved');
+app.use('/saved-jobs', savedRoutes);
 
 // Apply & Upload Routes
 const applyRoutes = require('./routes/apply');
