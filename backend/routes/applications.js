@@ -114,3 +114,14 @@ router.get('/my-applications', verifyToken, requireRole('candidate'), (req, res)
 });
 
 module.exports = router;
+// DELETE /applications/:id  (Candidate only: withdraw job application)
+router.delete('/:id', verifyToken, requireRole('candidate'), (req, res) => {
+  const result = db
+    .prepare('DELETE FROM applications WHERE id = ? AND candidate_id = ?')
+    .run(req.params.id, req.user.id);
+
+  if (result.changes === 0) {
+    return res.status(404).json({ message: 'Application not found' });
+  }
+  res.json({ message: 'Application withdrawn successfully' });
+});
