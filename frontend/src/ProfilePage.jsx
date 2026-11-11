@@ -4,6 +4,7 @@ import './App.css'
 import './pages.css'
 import {
   getUser,
+  getCandidateStats,
   myApplications,
   getSavedJobs,
   getJobs,
@@ -55,6 +56,32 @@ function ProfilePage({ onLogout }) {
         }
 
         return
+      }
+
+      try {
+        const [statsResult, savedResult] = await Promise.allSettled([getCandidateStats(), getSavedJobs()])
+
+        if (statsResult.status !== 'fulfilled') throw statsResult.reason
+
+        const data = statsResult.value
+        const savedCount =
+          savedResult.status === 'fulfilled' && Array.isArray(savedResult.value)
+            ? savedResult.value.length
+            : Number(data.saved_jobs_count || 0)
+        const byStatus = data.applications_by_status || {}
+        const total = Object.values(byStatus).reduce((sum, count) => sum + Number(count || 0), 0)
+
+        if (active) {
+          setStats([
+            ['Applications', total],
+            ['Shortlisted / Interview', Number(byStatus.Shortlisted || 0) + Number(byStatus.Interview || 0)],
+            ['Saved jobs', savedCount]
+          ])
+        }
+
+        return
+      } catch {
+        // Fall back to counting from the lists below
       }
 
       const [apps, saved] = await Promise.allSettled([myApplications(), getSavedJobs()])

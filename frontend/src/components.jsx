@@ -1,4 +1,6 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { getCandidateStats, getSavedJobs } from './api'
 import { normalizeStatus } from './utils'
 import './pages.css'
 
@@ -62,5 +64,55 @@ export function Notice({ type = 'error', children, onClose }) {
         </button>
       )}
     </div>
+  )
+}
+
+// Candidate dashboard numbers from GET /candidate/stats (hidden if the request fails)
+export function CandidateStats() {
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    let active = true
+
+    Promise.allSettled([getCandidateStats(), getSavedJobs()]).then(([statsResult, savedResult]) => {
+      if (!active || statsResult.status !== 'fulfilled') return
+
+      // saved_jobs_count in /candidate/stats is not reliable, so count the saved list
+      const savedCount =
+        savedResult.status === 'fulfilled' && Array.isArray(savedResult.value)
+          ? savedResult.value.length
+          : statsResult.value.saved_jobs_count
+
+      setStats({ ...statsResult.value, saved_jobs_count: savedCount })
+    })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (!stats) return null
+
+  const byStatus = stats.applications_by_status || {}
+  const total = Object.values(byStatus).reduce((sum, count) => sum + Number(count || 0), 0)
+  const advanced = Number(byStatus.Shortlisted || 0) + Number(byStatus.Interview || 0)
+  const interviews = Array.isArray(stats.upcoming_interviews) ? stats.upcoming_interviews.length : 0
+
+  const items = [
+    ['Applications', total],
+    ['Shortlisted / Interview', advanced],
+    ['Saved jobs', Number(stats.saved_jobs_count || 0)],
+    ['Upcoming interviews', interviews],
+  ]
+
+  return (
+    <section className="cs-strip" aria-label="Your activity">
+      {items.map(([label, value]) => (
+        <div className="cs-item" key={label}>
+          <strong>{value}</strong>
+          <span>{label}</span>
+        </div>
+      ))}
+    </section>
   )
 }

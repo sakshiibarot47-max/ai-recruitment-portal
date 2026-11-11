@@ -235,7 +235,8 @@ function MyJobs() {
                     </div>
 
                     <p className="rc-job-meta">
-                      {job.company} · {job.location || 'Location not specified'}
+                      {[job.company, job.location].filter(Boolean).join(' · ') ||
+                        'Company and location not specified'}
                     </p>
 
                     <p className="rc-job-desc">{job.description}</p>

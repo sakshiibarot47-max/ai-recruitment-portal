@@ -135,19 +135,38 @@ export const myApplications = async () => {
 };
 
 export const withdrawApplication = async (applicationId) => {
-  try {
-    const response = await apiClient.delete(
-      `/my/applications/${applicationId}`
-    );
+  // Backend route: DELETE /applications/:id  (older docs mention /my/applications/:id)
+  const paths = [
+    `/applications/${applicationId}`,
+    `/my/applications/${applicationId}`
+  ];
 
-    return response.data;
-  } catch (error) {
-    if (isMissingRoute(error)) {
-      throw new Error('Withdrawing an application is not available yet. Please contact the recruiter.', { cause: error });
+  let lastError = null;
+
+  for (const path of paths) {
+    try {
+      const response = await apiClient.delete(path);
+      return response.data;
+    } catch (error) {
+      // Real "not found" / permission errors must be shown as they are
+      if (!isMissingRoute(error) || !/^Route not found/i.test(error.message)) {
+        throw error;
+      }
+
+      lastError = error;
     }
-
-    throw error;
   }
+
+  throw new Error(
+    'Withdrawing an application is not available yet. Please contact the recruiter.',
+    { cause: lastError }
+  );
+};
+
+// CANDIDATE DASHBOARD STATS
+export const getCandidateStats = async () => {
+  const response = await apiClient.get('/candidate/stats');
+  return response.data;
 };
 
 // SAVED JOB APIs (server na ho to isi browser me save hota hai)

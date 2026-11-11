@@ -70,12 +70,9 @@ function ApplicationsPage({ onBack }) {
     try {
       await deleteApplication(application.id)
 
+      // The backend deletes the application, so remove it from the list too
       setApplications(previous =>
-        previous.map(item =>
-          String(item.id) === String(application.id)
-            ? { ...item, status: 'Withdrawn' }
-            : item
-        )
+        previous.filter(item => String(item.id) !== String(application.id))
       )
 
       setNotice('Application withdrawn successfully.')

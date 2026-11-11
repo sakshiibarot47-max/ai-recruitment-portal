@@ -1,6 +1,7 @@
 
 import './App.css'
 import './pages.css'
+import { CandidateStats } from './components'
 
 function Dashboard({ user, onLogout, onNavigate }) {
   const isRecruiter = user?.role === 'recruiter'
@@ -140,6 +141,8 @@ function Dashboard({ user, onLogout, onNavigate }) {
             View profile →
           </button>
         </section>
+
+        {!isRecruiter && <CandidateStats />}
 
         <section className="dashboard-workspace">
           <div className="dashboard-section-heading">

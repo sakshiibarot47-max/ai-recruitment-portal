@@ -170,7 +170,7 @@ function Applicants() {
         <h1>Applicants</h1>
         <p className="manage-jobs-intro">
           {job
-            ? `${job.title} · ${job.company}`
+            ? [job.title, job.company].filter(Boolean).join(' · ')
             : 'Review candidates and move them through your hiring pipeline.'}
         </p>
 
