@@ -163,6 +163,51 @@ export const withdrawApplication = async (applicationId) => {
   );
 };
 
+// JOBS WITH PAGINATION (reads X-Total-Count and X-Total-Pages headers)
+export const getJobsPage = async (filters = {}) => {
+  const response = await apiClient.get('/jobs', {
+    params: {
+      search: filters.search || '',
+      location: filters.location || '',
+      type: filters.type || '',
+      page: filters.page || 1,
+      limit: filters.limit || 6,
+    },
+  });
+
+  const jobs = Array.isArray(response.data) ? response.data : [];
+  const total = Number(response.headers['x-total-count']);
+  const totalPages = Number(response.headers['x-total-pages']);
+
+  return {
+    jobs,
+    total: Number.isFinite(total) ? total : jobs.length,
+    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1,
+  };
+};
+
+// CANDIDATE PROFILE + RECOMMENDATIONS
+export const getMyProfile = async () => {
+  const response = await apiClient.get('/profile/me');
+  return response.data;
+};
+
+export const updateMyProfile = async (profile) => {
+  const response = await apiClient.put('/profile/me', profile);
+  return response.data;
+};
+
+export const getRecommendedJobs = async () => {
+  const response = await apiClient.get('/recommendations/jobs');
+  return response.data;
+};
+
+// RECRUITER ANALYTICS
+export const getRecruiterStats = async () => {
+  const response = await apiClient.get('/recruiter/stats');
+  return response.data;
+};
+
 // CANDIDATE DASHBOARD STATS
 export const getCandidateStats = async () => {
   const response = await apiClient.get('/candidate/stats');

@@ -11,6 +11,7 @@ import {
   getApplicants
 } from './api'
 import { normalizeStatus } from './utils'
+import ProfileForm from './ProfileForm'
 
 function ProfilePage({ onLogout }) {
   const navigate = useNavigate()
@@ -170,6 +171,8 @@ function ProfilePage({ onLogout }) {
             </div>
           ))}
         </section>
+
+        {!isRecruiter && <ProfileForm />}
 
         <section className="pf-links">
           <h2>Quick links</h2>

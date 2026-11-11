@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import { getCandidateStats, getSavedJobs } from './api'
+import { getCandidateStats, getSavedJobs, getRecruiterStats } from './api'
 import { normalizeStatus } from './utils'
 import './pages.css'
 
@@ -113,6 +113,131 @@ export function CandidateStats() {
           <span>{label}</span>
         </div>
       ))}
+    </section>
+  )
+}
+
+// Page buttons for lists (jobs feed)
+export function Pagination({ page, totalPages, onChange, disabled }) {
+  if (totalPages <= 1) return null
+
+  const start = Math.max(1, Math.min(page - 2, totalPages - 4))
+  const end = Math.min(totalPages, start + 4)
+  const numbers = []
+
+  for (let number = start; number <= end; number += 1) numbers.push(number)
+
+  return (
+    <nav className="pg-nav" aria-label="Pages">
+      <button
+        type="button"
+        className="pg-button"
+        disabled={disabled || page <= 1}
+        onClick={() => onChange(page - 1)}
+      >
+        ← Previous
+      </button>
+
+      <div className="pg-numbers">
+        {numbers.map(number => (
+          <button
+            type="button"
+            key={number}
+            className={`pg-number ${number === page ? 'active' : ''}`}
+            disabled={disabled}
+            aria-current={number === page ? 'page' : undefined}
+            onClick={() => onChange(number)}
+          >
+            {number}
+          </button>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="pg-button"
+        disabled={disabled || page >= totalPages}
+        onClick={() => onChange(page + 1)}
+      >
+        Next →
+      </button>
+    </nav>
+  )
+}
+
+const ANALYTICS_STATUSES = ['Applied', 'Shortlisted', 'Interview', 'Offer', 'Rejected']
+
+// Recruiter analytics from GET /recruiter/stats (hidden if the request fails)
+export function RecruiterAnalytics() {
+  const [stats, setStats] = useState(null)
+
+  useEffect(() => {
+    let active = true
+
+    getRecruiterStats()
+      .then(data => {
+        if (active) setStats(data)
+      })
+      .catch(() => {})
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  if (!stats) return null
+
+  const byStatus = stats.by_status || {}
+  const total = ANALYTICS_STATUSES.reduce((sum, name) => sum + Number(byStatus[name] || 0), 0)
+  const average =
+    stats.average_match_score === null || stats.average_match_score === undefined
+      ? null
+      : Math.round(Number(stats.average_match_score))
+
+  return (
+    <section className="ra-card" aria-label="Hiring analytics">
+      <div className="ra-head">
+        <h2>Hiring analytics</h2>
+
+        <div className="ra-facts">
+          <span>
+            Average match score <b>{average === null ? '—' : `${average}%`}</b>
+          </span>
+          <span>
+            Upcoming interviews <b>{Number(stats.upcoming_interviews || 0)}</b>
+          </span>
+        </div>
+      </div>
+
+      {total === 0 ? (
+        <p className="ra-empty">Analytics will appear once candidates apply to your jobs.</p>
+      ) : (
+        <>
+          <div className="ra-bar" role="img" aria-label="Applicants by status">
+            {ANALYTICS_STATUSES.map(name => {
+              const count = Number(byStatus[name] || 0)
+
+              return count > 0 ? (
+                <span
+                  key={name}
+                  className={`ra-seg hs-${name.toLowerCase()}`}
+                  style={{ width: `${(count / total) * 100}%` }}
+                  title={`${name}: ${count}`}
+                />
+              ) : null
+            })}
+          </div>
+
+          <ul className="ra-legend">
+            {ANALYTICS_STATUSES.map(name => (
+              <li key={name}>
+                <span className={`ra-dot hs-${name.toLowerCase()}`} />
+                {name} <b>{Number(byStatus[name] || 0)}</b>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   )
 }

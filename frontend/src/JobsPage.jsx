@@ -4,9 +4,11 @@ import { Link } from 'react-router-dom'
 import './App.css'
 import './pages.css'
 import { JOB_TYPES } from './utils'
+import { Pagination } from './components'
+import RecommendedJobs from './RecommendedJobs'
 
 import {
-  getJobs,
+  getJobsPage,
   getSavedJobs,
   saveJob,
   removeSavedJob,
@@ -18,6 +20,10 @@ function JobsPage({ onBack }) {
   const [search, setSearch] = useState('')
   const [location, setLocation] = useState('')
   const [type, setType] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalJobs, setTotalJobs] = useState(0)
+  const [applied, setApplied] = useState({ search: '', location: '', type: '' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedFiles, setSelectedFiles] = useState({})
@@ -27,23 +33,35 @@ function JobsPage({ onBack }) {
   const [savingJob, setSavingJob] = useState(null)
   const [savedError, setSavedError] = useState('')
 
+  // overrides: filters to use and the page number (a new search always starts at page 1)
   async function loadJobs(overrides = {}) {
     setLoading(true)
     setError('')
 
-    try {
-      const data = await getJobs({
-        search: (overrides.search ?? search).trim(),
-        location: (overrides.location ?? location).trim(),
-        type: overrides.type ?? type
-      })
+    const filters = {
+      search: (overrides.search ?? search).trim(),
+      location: (overrides.location ?? location).trim(),
+      type: overrides.type ?? type
+    }
 
-      setJobs(Array.isArray(data) ? data : data.jobs || [])
+    try {
+      const result = await getJobsPage({ ...filters, page: overrides.page || 1 })
+
+      setJobs(result.jobs)
+      setTotalJobs(result.total)
+      setTotalPages(result.totalPages)
+      setPage(overrides.page || 1)
+      setApplied(filters)
     } catch (err) {
       setError(err.message || 'Jobs load nahi hui.')
     } finally {
       setLoading(false)
     }
+  }
+
+  function goToPage(number) {
+    loadJobs({ ...applied, page: number })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function loadSavedJobs() {
@@ -192,7 +210,7 @@ function JobsPage({ onBack }) {
           <div className="find-summary-icon">▤</div>
           <div>
             <span>Available opportunities</span>
-            <strong>{loading ? '...' : jobs.length}</strong>
+            <strong>{loading ? '...' : totalJobs}</strong>
           </div>
 
           <div className="find-summary-divider" />
@@ -203,6 +221,8 @@ function JobsPage({ onBack }) {
             <strong>{savedCount}</strong>
           </div>
         </section>
+
+        <RecommendedJobs />
 
         <form
           className="find-jobs-search has-type"
@@ -269,7 +289,7 @@ function JobsPage({ onBack }) {
             <p>Find a role that moves your career forward.</p>
           </div>
           <span>
-            {loading ? 'Loading...' : `${filteredJobs.length} jobs found`}
+            {loading ? 'Loading...' : `${totalJobs} ${totalJobs === 1 ? 'job' : 'jobs'} found`}
           </span>
         </div>
 
@@ -433,6 +453,13 @@ function JobsPage({ onBack }) {
             })}
           </div>
         )}
+
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          disabled={loading}
+          onChange={goToPage}
+        />
 
         <footer className="find-jobs-footer">
           <span>HireAI Candidate Workspace</span>

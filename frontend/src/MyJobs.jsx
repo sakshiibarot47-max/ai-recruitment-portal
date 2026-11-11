@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import './App.css'
 import './pages.css'
 import { getJobs, getApplicants, getUser } from './api'
-import { PageHeader, RecruiterTabs, Notice } from './components'
+import { PageHeader, RecruiterTabs, Notice, RecruiterAnalytics } from './components'
 import { JOB_TYPES, normalizeStatus, skillList } from './utils'
 
 function MyJobs() {
@@ -15,6 +15,7 @@ function MyJobs() {
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
+  const [refreshCount, setRefreshCount] = useState(0)
 
   const fetchMyJobs = useCallback(async () => {
     const data = await getJobs()
@@ -68,6 +69,7 @@ function MyJobs() {
   async function loadJobs() {
     setLoading(true)
     setError('')
+    setRefreshCount(count => count + 1)
 
     try {
       const { mine, counts } = await fetchMyJobs()
@@ -158,6 +160,8 @@ function MyJobs() {
             </div>
           </div>
         </section>
+
+        <RecruiterAnalytics key={refreshCount} />
 
         <div className="rc-toolbar">
           <input
