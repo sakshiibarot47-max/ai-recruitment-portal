@@ -14,7 +14,15 @@ const app = express();
 const { securityHeaders, authLimiter, notFound, errorHandler } = require('./middleware/security');
 
 app.use(securityHeaders);
-app.use(cors({ exposedHeaders: ['X-Total-Count', 'X-Total-Pages'] }));
+
+// Updated CORS configuration to allow local frontend requests and authorization headers
+app.use(cors({
+  origin: '*', // Allows requests from your Vite frontend (http://localhost:5173)
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
+}));
+
 app.use(express.json({ limit: '100kb' }));
 
 // Auth & Jobs & Applications Routes (Apply rate limits to auth login and register)
@@ -28,14 +36,14 @@ app.use('/jobs', jobRoutes);
 
 const applicationRoutes = require('./routes/applications');
 app.use('/applications', applicationRoutes);
-// New Weekend Task Routes (Profile & Recommendations & Saved Jobs)
+
+// Profile & Recommendations & Saved Jobs Routes
 const profileRoutes = require('./routes/profile');
 app.use('/profile', profileRoutes);
 
 const recommendationsRoutes = require('./routes/recommendations');
 app.use('/recommendations', recommendationsRoutes);
 
-// Yahan yeh line add karni hai:
 const savedRoutes = require('./routes/saved');
 app.use('/saved-jobs', savedRoutes);
 
@@ -46,9 +54,10 @@ app.use('/', applyRoutes);
 const uploadRoutes = require('./routes/upload');
 app.use('/upload', uploadRoutes);
 
-// Recruiter Dashboard Routes
+// Recruiter Dashboard & Candidate Stats Routes
 const recruiterRoutes = require('./routes/recruiter');
 app.use('/recruiter', recruiterRoutes);
+
 const candidateStatsRoutes = require('./routes/candidateStats');
 app.use('/candidate', candidateStatsRoutes);
 
