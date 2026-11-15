@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import './theme.css'
 import './ui.css'
+import './landing.css'
 import './responsive.css'
 
 createRoot(document.getElementById('root')).render(

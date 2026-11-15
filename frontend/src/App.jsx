@@ -19,6 +19,8 @@ import JobsPage from './JobsPage'
 import SavedJobsPage from './SavedJobsPage'
 import ProtectedRoute from './ProtectedRoute'
 import ResumeBuilder from './ResumeBuilder'
+import Logo from './Logo'
+import { Button } from './ui'
 import { login as loginRequest, register as registerRequest } from './api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
@@ -68,6 +70,7 @@ function AppContent() {
   const [toast, setToast] = useState(null)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const [loggedInUser, setLoggedInUser] = useState(() => {
     try {
@@ -177,6 +180,14 @@ function AppContent() {
     setShowPassword(false)
   }
 
+  // Navbar / hero buttons: auth card tak le jao, mode aur role set karke
+  function goToAuth(nextMode, nextRole) {
+    changeMode(nextMode)
+    if (nextRole) setRole(nextRole)
+    setMenuOpen(false)
+    document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   // Logged-in workspace with React Router
   if (loggedInUser) {
     // After login a candidate lands on /jobs and a recruiter on /recruiter/jobs
@@ -274,89 +285,72 @@ function AppContent() {
         </div>
       )}
 
-      <header className="navbar">
-        <a className="brand" href="#home">
-          <span className="brand-icon">H</span>
-          <span>Hire<span>AI</span></span>
-        </a>
-
-        <nav className="main-nav">
-          <a href="#home">Home</a>
-          <a href="#features">Features</a>
-          <a href="#about">About</a>
-        </nav>
-
-        <div className="nav-actions">
-          <button
-            className="nav-text-button"
-            onClick={() => {
-              changeMode('login')
-              document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
-            }}
-          >
-            Sign in
-          </button>
+      <header className="site-nav">
+        <div className="site-nav-inner">
+          <a className="site-brand" href="#home" onClick={() => setMenuOpen(false)} aria-label="HireAI home">
+            <Logo />
+          </a>
 
           <button
-            className="nav-button"
-            onClick={() => {
-              changeMode('register')
-              document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
-            }}
+            type="button"
+            className="site-nav-toggle"
+            aria-expanded={menuOpen}
+            aria-controls="site-menu"
+            onClick={() => setMenuOpen(open => !open)}
           >
-            Get started
+            <span className="sr-only">{menuOpen ? 'Close menu' : 'Open menu'}</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              {menuOpen ? (
+                <path d="M6 6l12 12M18 6L6 18" />
+              ) : (
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              )}
+            </svg>
           </button>
+
+          <div id="site-menu" className={`site-nav-menu${menuOpen ? ' is-open' : ''}`}>
+            <nav className="site-nav-links" aria-label="Main">
+              <a href="#paths" onClick={() => setMenuOpen(false)}>Find work</a>
+              <button type="button" onClick={() => goToAuth('register', 'recruiter')}>For recruiters</button>
+              <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
+              <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
+            </nav>
+
+            <div className="site-nav-actions">
+              <Button variant="ghost" onClick={() => goToAuth('login')}>Sign in</Button>
+              <Button variant="accent" onClick={() => goToAuth('register', 'candidate')}>Get started</Button>
+            </div>
+          </div>
         </div>
       </header>
 
       <main>
         <section className="hero-section">
           <div className="hero-copy">
-            <div className="eyebrow">
-              <span className="live-dot" />
-              SMARTER HIRING STARTS HERE
-            </div>
-
-            <h1>
-              Find your next
-              <br />
-              opportunity with <span>HireAI.</span>
-            </h1>
+            <h1 className="hero-title">Internships for students. Jobs for graduates.</h1>
 
             <p className="hero-description">
-              A smarter way to connect talent with opportunity.
-              Discover exciting careers or find the right people for your team.
+              Build your profile once, see how well you match a role before you
+              apply, and track every application in one place. Recruiters get one
+              workspace for postings and applicants.
             </p>
 
-            <div className="hero-buttons">
-              <button
-                className="primary-button"
-                onClick={() => {
-                  changeMode('register')
-                  setRole('candidate')
-                  document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
-                Find a Job →
+            <div className="hero-paths" id="paths">
+              <button type="button" className="hero-path" onClick={() => goToAuth('register', 'candidate')}>
+                <span className="hero-path-title">Find internships</span>
+                <span className="hero-path-sub">For college students</span>
               </button>
-
-              <button
-                className="secondary-button"
-                onClick={() => {
-                  changeMode('register')
-                  setRole('recruiter')
-                  document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
-                }}
-              >
-                Hire Talent
+              <button type="button" className="hero-path" onClick={() => goToAuth('register', 'candidate')}>
+                <span className="hero-path-title">Find jobs</span>
+                <span className="hero-path-sub">For graduates</span>
+              </button>
+              <button type="button" className="hero-path" onClick={() => goToAuth('register', 'recruiter')}>
+                <span className="hero-path-title">Hire talent</span>
+                <span className="hero-path-sub">For recruiters</span>
               </button>
             </div>
 
-            <div className="hero-points">
-              <div><span className="point-check">✓</span> Smart job discovery</div>
-              <div><span className="point-check">✓</span> Resume-based skill matching</div>
-              <div><span className="point-check">✓</span> One workspace for your hiring journey</div>
-            </div>
+            <p className="hero-aside">Openings are shown after you sign in.</p>
           </div>
 
           <section className="auth-card auth-panel" id="auth">
