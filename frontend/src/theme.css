@@ -1,0 +1,66 @@
+/* ==========================================================
+   HireAI theme: Deep Teal + Ice (+ Amber accent)
+   Ye file sabse last me load hoti hai (responsive.css se pehle).
+   Rang badalne ho to sirf yahan ke variables badlo.
+   ========================================================== */
+
+:root {
+  /* Brand */
+  --brand-deep: #0f4c5c;        /* Deep Teal: navbar, main buttons, headings */
+  --brand-deep-hover: #0b3a47;
+  --brand-teal: #0f766e;        /* Teal: links, icons on light background */
+  --brand-ice: #bae6fd;         /* Ice: highlights, light fills */
+  --brand-ice-soft: #e0f2fe;    /* Cloud */
+  --brand-ice-faint: #f0f9ff;
+
+  /* Accent (call-to-action buttons) */
+  --accent: #f59e0b;            /* Amber */
+  --accent-hover: #d98206;
+
+  /* Surfaces and text */
+  --bg: #f4fafd;
+  --surface: #ffffff;
+  --ink: #0b2a33;
+  --text: #3c5560;
+  --muted: #526c76;
+  --border: #d5e7ef;
+
+  /* Status */
+  --success: #16a34a;
+  --success-soft: #dcfce7;
+  --error: #dc2626;
+  --error-soft: #fee2e2;
+  --warning: #d97706;
+  --info: #0369a1;
+
+  /* Shape and shadow */
+  --radius: 12px;
+  --shadow: 0 18px 55px rgba(15, 76, 92, 0.1);
+
+  /* Old variable names used in App.css now point to the new theme */
+  --page: var(--bg);
+  --fern: var(--brand-teal);
+  --fern-dark: var(--brand-deep);
+  --fern-light: #d3effc;
+  --fern-soft: #eaf7fd;
+  --saffron: var(--accent);
+  --saffron-hover: var(--accent-hover);
+}
+
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+::selection { background: var(--brand-ice); color: var(--ink); }
+
+/* Keyboard users ko saaf focus ring */
+:focus-visible { outline: 3px solid var(--brand-teal); outline-offset: 2px; }
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible { outline-offset: 0; }
+
+/* Status colours stay meaningful (Applied grey, Shortlisted blue, Interview purple, Offer green, Rejected red) */
+.hs-applied { background: #eef0f3; color: #52606d; }
+.hs-shortlisted { background: #e0f2fe; color: #0369a1; }
+.ra-seg.hs-applied,
+.ra-dot.hs-applied { background: #9aa5b1; }
+.ra-seg.hs-shortlisted,
+.ra-dot.hs-shortlisted { background: #0ea5e9; }
