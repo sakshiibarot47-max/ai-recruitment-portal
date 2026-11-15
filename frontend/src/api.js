@@ -47,6 +47,7 @@ apiClient.interceptors.response.use(
 
     const requestError = new Error(message);
     requestError.status = error.response?.status;
+    requestError.data = error.response?.data; // needsVerification, retryAfter jaisi cheezein
 
     return Promise.reject(requestError);
   }
@@ -98,6 +99,14 @@ export const login = async (credentials) => {
 
   return response.data;
 };
+
+export const verifyOtp = async (data) => (await apiClient.post('/auth/verify-otp', data)).data;
+
+export const resendOtp = async (data) => (await apiClient.post('/auth/resend-otp', data)).data;
+
+export const forgotPassword = async (data) => (await apiClient.post('/auth/forgot-password', data)).data;
+
+export const resetPassword = async (data) => (await apiClient.post('/auth/reset-password', data)).data;
 
 // JOB APIs
 export const getJobs = async (filters = {}) => {

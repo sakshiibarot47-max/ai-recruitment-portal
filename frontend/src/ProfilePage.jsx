@@ -155,7 +155,7 @@ function ProfilePage({ onLogout }) {
               {isRecruiter ? 'Recruiter account' : 'Candidate account'}
             </span>
             <h1>{user?.name || 'User'}</h1>
-            <p>{user?.email}</p>
+            <p>{user?.email || user?.phone}</p>
           </div>
 
           <button type="button" className="pf-signout" onClick={onLogout}>

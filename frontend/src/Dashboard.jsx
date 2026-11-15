@@ -127,7 +127,7 @@ function Dashboard({ user, onLogout, onNavigate }) {
           </div>
           <div>
             <span>SIGNED IN AS</span>
-            <strong>{user?.email || 'Your account'}</strong>
+            <strong>{user?.email || user?.phone || 'Your account'}</strong>
           </div>
           <span className="dashboard-account-status">
             <span className="live-dot" />

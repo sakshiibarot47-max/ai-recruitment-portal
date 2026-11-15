@@ -21,56 +21,16 @@ import ProtectedRoute from './ProtectedRoute'
 import ResumeBuilder from './ResumeBuilder'
 import Logo from './Logo'
 import { Button } from './ui'
-import { login as loginRequest, register as registerRequest } from './api'
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-const NAME_PART_RE = /^[\p{L}][\p{L}'’-]{1,49}$/u
-
-const PASSWORD_RULES = [
-  { label: 'At least 8 characters', test: p => p.length >= 8 },
-  { label: 'One capital letter (A-Z)', test: p => /[A-Z]/.test(p) },
-  { label: 'One small letter (a-z)', test: p => /[a-z]/.test(p) },
-  { label: 'One number (0-9)', test: p => /[0-9]/.test(p) },
-  { label: 'One special character (@, #, !, ...)', test: p => /[^A-Za-z0-9]/.test(p) },
-  { label: 'No spaces', test: p => !/\s/.test(p) },
-]
-
-function validateForm(mode, { name, email, password, confirmPassword }) {
-  if (mode === 'register') {
-    const parts = name.trim().split(/\s+/)
-
-    if (parts.length < 2 || !parts.every(x => NAME_PART_RE.test(x))) {
-      return 'Enter your first name and surname using letters only.'
-    }
-  }
-
-  if (!EMAIL_RE.test(email.trim())) return 'Enter a valid email address.'
-  if (!password) return 'Enter your password.'
-
-  if (mode === 'register') {
-    const failed = PASSWORD_RULES.find(r => !r.test(password))
-
-    if (failed) return 'Password rule missing: ' + failed.label + '.'
-    if (password !== confirmPassword) return 'Passwords do not match.'
-  }
-
-  return ''
-}
+import AuthPanel from './AuthPanel'
 
 function AppContent() {
   const navigate = useNavigate()
 
   const [mode, setMode] = useState('login')
   const [role, setRole] = useState('candidate')
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
   const [toast, setToast] = useState(null)
-  const [message, setMessage] = useState('')
-  const [loading, setLoading] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [authKey, setAuthKey] = useState(0) // badalne par login box saaf hokar dobara khulta hai
 
   const [loggedInUser, setLoggedInUser] = useState(() => {
     try {
@@ -91,73 +51,22 @@ function AppContent() {
     setToast({ type, text, id: Date.now() })
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault()
-    setMessage('')
+  // Login ya OTP verify hone ke baad: token save karo aur sahi page par bhejo
+  function completeLogin(data, welcomeText) {
+    const token = data.token || data.accessToken
+    const user = data.user || data
 
-    const problem = validateForm(mode, {
-      name,
-      email,
-      password,
-      confirmPassword
-    })
-
-    if (problem) {
-      setMessage(problem)
-      notify('error', problem)
+    if (!token || !user?.id) {
+      notify('error', 'Invalid server response. Please try again.')
       return
     }
 
-    setLoading(true)
+    localStorage.setItem('hireai_token', token)
+    localStorage.setItem('hireai_user', JSON.stringify(user))
 
-    try {
-      const payload = mode === 'register'
-        ? { name: name.trim(), email: email.trim(), password, role }
-        : { email: email.trim(), password }
-
-      const data = mode === 'register'
-        ? await registerRequest(payload)
-        : await loginRequest(payload)
-
-      if (mode === 'register') {
-        notify('success', 'Account created successfully! Please sign in.')
-        setMode('login')
-        setPassword('')
-        setConfirmPassword('')
-        setShowPassword(false)
-        return
-      }
-
-      const token = data.token || data.accessToken
-      const user = data.user || data
-
-      if (!token || !user.email) {
-        throw new Error('Invalid server response. Check your backend login response.')
-      }
-
-      localStorage.setItem('hireai_token', token)
-      localStorage.setItem('hireai_user', JSON.stringify(user))
-
-      setLoggedInUser(user)
-      setPassword('')
-
-      notify('success', 'Welcome back! Signed in successfully.')
-
-      if (user.role?.toLowerCase() === 'recruiter') {
-        navigate('/recruiter/jobs')
-      } else {
-        navigate('/jobs')
-      }
-    } catch (error) {
-      const text = (error instanceof TypeError || error.message === 'Network Error')
-        ? 'Cannot connect to the server. Make sure the backend is running on port 5000.'
-        : (error.message || 'Something went wrong.')
-
-      setMessage(text)
-      notify('error', text)
-    } finally {
-      setLoading(false)
-    }
+    setLoggedInUser(user)
+    notify('success', welcomeText)
+    navigate(user.role?.toLowerCase() === 'recruiter' ? '/recruiter/jobs' : '/jobs')
   }
 
   function logout() {
@@ -166,24 +75,15 @@ function AppContent() {
 
     setLoggedInUser(null)
     setMode('login')
-    setMessage('')
-    setPassword('')
 
     navigate('/')
   }
 
-  function changeMode(value) {
-    setMode(value)
-    setMessage('')
-    setPassword('')
-    setConfirmPassword('')
-    setShowPassword(false)
-  }
-
   // Navbar / hero buttons: auth card tak le jao, mode aur role set karke
   function goToAuth(nextMode, nextRole) {
-    changeMode(nextMode)
+    setMode(nextMode)
     if (nextRole) setRole(nextRole)
+    setAuthKey(key => key + 1)
     setMenuOpen(false)
     document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
   }
@@ -353,177 +253,15 @@ function AppContent() {
             <p className="hero-aside">Openings are shown after you sign in.</p>
           </div>
 
-          <section className="auth-card auth-panel" id="auth">
-            <div className="auth-card-heading">
-              <span className="form-kicker">
-                {mode === 'login' ? 'WELCOME BACK' : 'JOIN HIREAI'}
-              </span>
-
-              <h2>{mode === 'login' ? 'Sign in to HireAI' : 'Create your account'}</h2>
-
-              <p className="auth-subtitle">
-                {mode === 'login'
-                  ? 'Enter your details to continue.'
-                  : 'Start your journey with HireAI.'}
-              </p>
-            </div>
-
-            <div className="auth-tabs">
-              <button
-                type="button"
-                className={mode === 'login' ? 'selected' : ''}
-                onClick={() => changeMode('login')}
-              >
-                Sign in
-              </button>
-
-              <button
-                type="button"
-                className={mode === 'register' ? 'selected' : ''}
-                onClick={() => changeMode('register')}
-              >
-                Create account
-              </button>
-            </div>
-
-            <form className="auth-form" onSubmit={handleSubmit}>
-              {mode === 'register' && (
-                <label className="form-field">
-                  <span>Full name</span>
-                  <input
-                    value={name}
-                    onChange={event => setName(event.target.value)}
-                    placeholder="Enter your full name"
-                    autoComplete="name"
-                    required
-                  />
-                </label>
-              )}
-
-              <label className="form-field">
-                <span>Email address</span>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={event => setEmail(event.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  required
-                />
-              </label>
-
-              <label className="form-field">
-                <span>Password</span>
-
-                <div className="password-wrap">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={event => setPassword(event.target.value)}
-                    placeholder="Enter your password"
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    maxLength={128}
-                    required
-                  />
-
-                  <button
-                    type="button"
-                    className="password-toggle"
-                    onClick={() => setShowPassword(value => !value)}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? 'Hide' : 'Show'}
-                  </button>
-                </div>
-              </label>
-
-              {mode === 'register' && (
-                <>
-                  <ul className="password-rules" aria-live="polite">
-                    {PASSWORD_RULES.map(rule => (
-                      <li key={rule.label} className={rule.test(password) ? 'ok' : ''}>
-                        {rule.label}
-                      </li>
-                    ))}
-                  </ul>
-
-                  <label className="form-field">
-                    <span>Confirm password</span>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      value={confirmPassword}
-                      onChange={event => setConfirmPassword(event.target.value)}
-                      placeholder="Re-enter your password"
-                      autoComplete="new-password"
-                      maxLength={128}
-                      required
-                    />
-                  </label>
-                </>
-              )}
-
-              {mode === 'register' && (
-                <fieldset className="role-field">
-                  <legend>I want to join as</legend>
-
-                  <div className="role-options">
-                    <button
-                      type="button"
-                      className={`role-option ${role === 'candidate' ? 'selected' : ''}`}
-                      onClick={() => setRole('candidate')}
-                    >
-                      <span className="role-symbol">⌕</span>
-                      <span>
-                        <strong>Candidate</strong>
-                        <small>Find opportunities</small>
-                      </span>
-                      <span className="role-radio">
-                        {role === 'candidate' ? '✓' : ''}
-                      </span>
-                    </button>
-
-                    <button
-                      type="button"
-                      className={`role-option ${role === 'recruiter' ? 'selected' : ''}`}
-                      onClick={() => setRole('recruiter')}
-                    >
-                      <span className="role-symbol">▤</span>
-                      <span>
-                        <strong>Recruiter</strong>
-                        <small>Hire great talent</small>
-                      </span>
-                      <span className="role-radio">
-                        {role === 'recruiter' ? '✓' : ''}
-                      </span>
-                    </button>
-                  </div>
-                </fieldset>
-              )}
-
-              {message && <div className="form-message" role="alert">{message}</div>}
-
-              <button
-                className="primary-button form-button"
-                type="submit"
-                disabled={loading}
-              >
-                {loading
-                  ? 'Please wait...'
-                  : mode === 'login'
-                    ? 'Sign in to your account →'
-                    : 'Create my account →'}
-              </button>
-            </form>
-
-            <p className="auth-switch">
-              {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
-              <button onClick={() => changeMode(mode === 'login' ? 'register' : 'login')}>
-                {mode === 'login' ? 'Create one' : 'Sign in'}
-              </button>
-            </p>
-
-            <p className="secure-note">Your information is handled securely.</p>
-          </section>
+          <AuthPanel
+            key={authKey}
+            mode={mode}
+            onModeChange={setMode}
+            role={role}
+            onRoleChange={setRole}
+            onSuccess={completeLogin}
+            notify={notify}
+          />
         </section>
 
         <section className="content-section" id="features">
@@ -569,10 +307,7 @@ function AppContent() {
 
             <button
               className="primary-button"
-              onClick={() => {
-                changeMode('register')
-                document.getElementById('auth')?.scrollIntoView({ behavior: 'smooth' })
-              }}
+              onClick={() => goToAuth('register', 'candidate')}
             >
               Get started →
             </button>

@@ -1,0 +1,13 @@
+/* Login / Register / OTP / Forgot password ke chhote extra styles (baaki styles App.css me hain) */
+.auth-link {
+  padding: 0; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--brand-deep);
+}
+.auth-link:hover:not(:disabled) { text-decoration: underline; }
+.auth-link:disabled { color: var(--muted); cursor: default; }
+.auth-forgot-row { display: flex; justify-content: flex-end; margin-top: -4px; }
+.auth-otp-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; color: var(--muted); }
+.auth-back { align-self: center; }
+.form-field input.otp-input {
+  text-align: center; font-size: 26px; font-weight: 700; letter-spacing: 0.45em; padding-left: 0.45em;
+}
