@@ -63,5 +63,8 @@ try {
   // column already exists
 }
 
+// Login (phone + OTP) ke naye columns aur table
+require('./authMigration')(db);
+
 console.log('Database ready: Tables created successfully');
 module.exports = db;

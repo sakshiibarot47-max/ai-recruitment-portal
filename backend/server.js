@@ -15,9 +15,18 @@ const { securityHeaders, authLimiter, notFound, errorHandler } = require('./midd
 
 app.use(securityHeaders);
 
-// Updated CORS configuration to allow local frontend requests and authorization headers
+// CORS: sirf apna frontend. Live site par ALLOWED_ORIGINS me uska address daalo.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:5174')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 app.use(cors({
-  origin: '*', // Allows requests from your Vite frontend (http://localhost:5173)
+  origin(origin, callback) {
+    // origin khali = curl / server-to-server, ya allow ki hui site
+    if (!origin || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(null, false);
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['X-Total-Count', 'X-Total-Pages']
@@ -27,8 +36,9 @@ app.use(express.json({ limit: '100kb' }));
 
 // Auth & Jobs & Applications Routes (Apply rate limits to auth login and register)
 const authRoutes = require('./routes/auth');
-app.use('/auth/login', authLimiter);
-app.use('/auth/register', authLimiter);
+for (const path of ['login', 'register', 'verify-otp', 'resend-otp', 'forgot-password', 'reset-password']) {
+  app.use('/auth/' + path, authLimiter);
+}
 app.use('/auth', authRoutes);
 
 const jobRoutes = require('./routes/jobs');

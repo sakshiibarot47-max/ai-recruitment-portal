@@ -7,6 +7,9 @@ async function sendMail(options) {
   const recipient = to || email;
   const body = text || message;
 
+  // Phone se bane account ka email nahi hota
+  if (!recipient) return { messageId: 'skipped-no-recipient' };
+
   // Generate a gorgeous local HTML preview file so you can open it directly in your browser
   const htmlContent = `
     <!DOCTYPE html>
@@ -43,7 +46,10 @@ async function sendMail(options) {
   `;
 
   // Save to a local html file in your backend folder
-  const filePath = path.join(__dirname, '..', 'email-preview.html');
+  // .dev-mail folder git me nahi jaata (.gitignore), taaki kisi ka email public repo me na pahunche
+  const previewDir = path.join(__dirname, '..', '.dev-mail');
+  fs.mkdirSync(previewDir, { recursive: true });
+  const filePath = path.join(previewDir, 'email-preview.html');
   fs.writeFileSync(filePath, htmlContent);
 
   console.log('--------------------------------------------------');
