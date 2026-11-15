@@ -1,0 +1,100 @@
+/* HireAI reusable components (ui.jsx). Rang theme.css ke variables se aate hain. */
+
+/* ---------- Button ---------- */
+.ui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border: 1px solid transparent; border-radius: 10px; cursor: pointer;
+  font: inherit; font-weight: 700; line-height: 1.2; text-decoration: none;
+  transition: background-color .15s, border-color .15s, color .15s, transform .05s;
+}
+.ui-btn:active:not(:disabled) { transform: translateY(1px); }
+.ui-btn:disabled { opacity: .55; cursor: not-allowed; }
+.ui-btn-sm { padding: 7px 12px; font-size: 13px; }
+.ui-btn-md { padding: 10px 18px; font-size: 15px; }
+.ui-btn-lg { padding: 14px 26px; font-size: 16px; }
+
+.ui-btn-primary { background: var(--brand-deep); color: #fff; }
+.ui-btn-primary:hover:not(:disabled) { background: var(--brand-deep-hover); }
+.ui-btn-accent { background: var(--accent); color: var(--ink); }
+.ui-btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
+.ui-btn-secondary { background: var(--surface); color: var(--brand-deep); border-color: var(--border); }
+.ui-btn-secondary:hover:not(:disabled) { background: var(--brand-ice-faint); border-color: var(--brand-ice); }
+.ui-btn-ghost { background: transparent; color: var(--brand-deep); }
+.ui-btn-ghost:hover:not(:disabled) { background: var(--brand-ice-soft); }
+.ui-btn-danger { background: var(--error); color: #fff; }
+.ui-btn-danger:hover:not(:disabled) { background: #b91c1c; }
+
+.ui-spinner {
+  width: 1em; height: 1em; border-radius: 50%;
+  border: 2px solid currentColor; border-right-color: transparent;
+  animation: ui-spin .7s linear infinite;
+}
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Input ---------- */
+.ui-field { display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.ui-label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.ui-input {
+  width: 100%; box-sizing: border-box; padding: 11px 13px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 15px;
+}
+.ui-input::placeholder { color: var(--muted); }
+.ui-input:hover { border-color: #b7d3df; }
+.ui-field-error .ui-input { border-color: var(--error); }
+.ui-field-msg { margin: 0; font-size: 13px; color: var(--muted); }
+.ui-field-msg-error { color: var(--error); }
+
+/* ---------- Card ---------- */
+.ui-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); text-align: left;
+}
+.ui-card-padded { padding: 20px; }
+.ui-card-interactive { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.ui-card-interactive:hover { border-color: var(--brand-ice); box-shadow: var(--shadow); }
+
+/* ---------- Skeleton ---------- */
+.ui-skeleton {
+  display: block; background: linear-gradient(90deg, var(--brand-ice-soft) 25%, var(--brand-ice-faint) 50%, var(--brand-ice-soft) 75%);
+  background-size: 200% 100%; animation: ui-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes ui-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* ---------- Modal ---------- */
+.ui-modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+  padding: 16px; background: rgba(11, 42, 51, .55);
+}
+.ui-modal {
+  width: 100%; max-width: 480px; max-height: calc(100vh - 32px); overflow: auto;
+  background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); text-align: left;
+}
+.ui-modal:focus { outline: none; }
+.ui-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 0; }
+.ui-modal-title { margin: 0; font-size: 20px; color: var(--ink); }
+.ui-modal-close { border: 0; background: transparent; font-size: 26px; line-height: 1; color: var(--muted); cursor: pointer; border-radius: 8px; padding: 2px 8px; }
+.ui-modal-close:hover { background: var(--brand-ice-soft); color: var(--ink); }
+.ui-modal-body { padding: 14px 20px 20px; color: var(--text); }
+.ui-modal-foot { display: flex; justify-content: flex-end; gap: 10px; padding: 0 20px 20px; }
+
+/* ---------- Toast ---------- */
+.ui-toast-region {
+  position: fixed; right: 16px; bottom: 16px; z-index: 1100;
+  display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px));
+}
+.ui-toast {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: 12px 14px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  background: var(--brand-deep); color: #fff; box-shadow: var(--shadow);
+}
+.ui-toast button { border: 0; background: transparent; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; opacity: .8; }
+.ui-toast button:hover { opacity: 1; }
+.ui-toast-success { background: var(--success-soft); color: #14532d; border: 1px solid #86efac; }
+.ui-toast-error { background: var(--error-soft); color: #991b1b; border: 1px solid #fca5a5; }
+.ui-toast-info { background: var(--brand-ice-soft); color: var(--brand-deep); border: 1px solid var(--brand-ice); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-spinner, .ui-skeleton { animation: none; }
+  .ui-btn { transition: none; }
+}

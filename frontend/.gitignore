@@ -25,3 +25,7 @@ dist-ssr
 
 # Local backup of the pre-merge code (do not push)
 src_backup_before_merge/
+
+# Local env (use .env.example as template)
+.env
+.env.local

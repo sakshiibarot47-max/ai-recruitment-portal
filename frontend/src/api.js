@@ -1,7 +1,8 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000';
+// Live site ke liye .env me VITE_API_URL daalo (frontend/.env.example dekho)
+const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
 
 // Axios instance
 const apiClient = axios.create({
