@@ -106,6 +106,8 @@ export const resendOtp = async (data) => (await apiClient.post('/auth/resend-otp
 
 export const forgotPassword = async (data) => (await apiClient.post('/auth/forgot-password', data)).data;
 
+export const verifyResetOtp = async (data) => (await apiClient.post('/auth/verify-reset-otp', data)).data;
+
 export const resetPassword = async (data) => (await apiClient.post('/auth/reset-password', data)).data;
 
 // JOB APIs

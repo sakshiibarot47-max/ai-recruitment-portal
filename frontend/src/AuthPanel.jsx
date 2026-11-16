@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { login, register, verifyOtp, resendOtp, forgotPassword, resetPassword } from './api'
+import { login, register, verifyOtp, resendOtp, forgotPassword, verifyResetOtp, resetPassword } from './api'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const NAME_PART_RE = /^[\p{L}][\p{L}'’-]{1,49}$/u
@@ -124,6 +124,9 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
   const [passwordTouched, setPasswordTouched] = useState(false)
+  const [confirm, setConfirm] = useState('')
+  const [confirmTouched, setConfirmTouched] = useState(false)
+  const [resetToken, setResetToken] = useState('')
 
   useEffect(() => {
     if (cooldown <= 0) return undefined
@@ -138,6 +141,8 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
     setPassword('')
     setShowPassword(false)
     setPasswordTouched(false)
+    setConfirm('')
+    setConfirmTouched(false)
   }
 
   function switchMode(nextMode) {
@@ -147,12 +152,15 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
 
   // Naam / email / phone ka password me hona rokne ke liye
   function passwordContext() {
-    if (view === 'reset') return { contacts: [pending.contact] }
+    if (view === 'resetNew') return { contacts: [pending.contact] }
     return { name, contacts: role === 'recruiter' ? [email, phone] : [contact] }
   }
 
   // Red line sirf tab dikhti hai jab user ne password likh ke aage badha ho (ya submit dabaya ho)
   const passwordError = passwordTouched ? passwordProblem(password, passwordContext()) : ''
+  const confirmError = confirmTouched && confirm !== password
+    ? (confirm ? 'Passwords do not match.' : 'Confirm your new password.')
+    : ''
 
   function fail(error) {
     const text = (error instanceof TypeError || error.message === 'Network Error')
@@ -279,32 +287,59 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
     return run(async () => {
       await forgotPassword({ contact: contact.trim() })
       setPending({ contact: contact.trim(), sentTo: contact.trim() })
-      go('reset')
+      setResetToken('')
+      setCooldown(RESEND_SECONDS)
+      go('resetOtp')
     })
   }
 
-  function submitReset(event) {
+  // Step 2: sirf OTP. Sahi ho to naya password wala page khulta hai
+  function submitResetOtp(event) {
     event.preventDefault()
     if (!/^\d{6}$/.test(code)) return problem('Enter the 6 digit code.')
-    if (passwordProblem(password, passwordContext())) {
-      setPasswordTouched(true)
-      return undefined
-    }
 
     return run(async () => {
-      await resetPassword({ contact: pending.contact, code, newPassword: password })
+      const data = await verifyResetOtp({ contact: pending.contact, code })
+      setResetToken(data.resetToken)
+      go('resetNew')
+    })
+  }
+
+  async function resendReset() {
+    setMessage('')
+    try {
+      await forgotPassword({ contact: pending.contact })
+      setCooldown(RESEND_SECONDS)
+      notify('success', 'If an account exists, we sent you a new code.')
+    } catch (error) {
+      fail(error)
+    }
+  }
+
+  // Step 3: naya password + confirm
+  function submitNewPassword(event) {
+    event.preventDefault()
+    setPasswordTouched(true)
+    setConfirmTouched(true)
+    if (passwordProblem(password, passwordContext()) || confirm !== password) return undefined
+
+    return run(async () => {
+      await resetPassword({ resetToken, newPassword: password })
       notify('success', 'Password updated. Please sign in with your new password.')
       onModeChange('login')
       setContact(pending.contact)
+      setResetToken('')
       go('form')
     })
   }
 
   const heading = view === 'otp'
     ? ['VERIFY', 'Enter your code', `We sent a 6 digit code to ${pending.sentTo || pending.contact}.`]
-    : view === 'reset'
-      ? ['RESET PASSWORD', 'Set a new password', `Enter the code we sent to ${pending.sentTo}, and choose a new password.`]
-      : HEADINGS[view === 'forgot' ? 'forgot' : mode]
+    : view === 'resetOtp'
+      ? ['RESET PASSWORD', 'Enter your code', `If an account exists for ${pending.contact}, we sent it a 6 digit code.`]
+      : view === 'resetNew'
+        ? ['RESET PASSWORD', 'Create a new password', 'Choose a new password for your account.']
+        : HEADINGS[view === 'forgot' ? 'forgot' : mode]
 
   return (
     <section className="auth-card auth-panel" id="auth">
@@ -535,8 +570,8 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
         </form>
       )}
 
-      {view === 'reset' && (
-        <form className="auth-form" onSubmit={submitReset} noValidate>
+      {view === 'resetOtp' && (
+        <form className="auth-form" onSubmit={submitResetOtp} noValidate>
           <label className="form-field">
             <span>6 digit code</span>
             <input
@@ -552,16 +587,48 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
             />
           </label>
 
+          {message && <div className="form-message" role="alert">{message}</div>}
+
+          <button className="primary-button form-button" type="submit" disabled={loading}>
+            {loading ? 'Please wait...' : 'Verify code →'}
+          </button>
+
+          <div className="auth-otp-row">
+            <span>Did not get the code?</span>
+            <button type="button" className="auth-link" onClick={resendReset} disabled={cooldown > 0}>
+              {cooldown > 0 ? `Resend in ${cooldown}s` : 'Resend code'}
+            </button>
+          </div>
+          <button type="button" className="auth-link auth-back" onClick={() => go('forgot')}>
+            ← Use a different email or number
+          </button>
+        </form>
+      )}
+
+      {view === 'resetNew' && (
+        <form className="auth-form" onSubmit={submitNewPassword} noValidate>
           <PasswordField
             label="New password"
             value={password}
             onChange={setPassword}
-            show={showPassword}
-            onToggle={() => setShowPassword(value => !value)}
             onBlur={() => password && setPasswordTouched(true)}
             error={passwordError}
+            show={showPassword}
+            onToggle={() => setShowPassword(value => !value)}
             autoComplete="new-password"
             placeholder="Create a new password"
+          />
+
+          <PasswordField
+            label="Confirm new password"
+            value={confirm}
+            onChange={setConfirm}
+            onBlur={() => confirm && setConfirmTouched(true)}
+            error={confirmError}
+            show={showPassword}
+            onToggle={() => setShowPassword(value => !value)}
+            autoComplete="new-password"
+            placeholder="Re-enter your new password"
           />
 
           {message && <div className="form-message" role="alert">{message}</div>}
@@ -569,8 +636,8 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
           <button className="primary-button form-button" type="submit" disabled={loading}>
             {loading ? 'Please wait...' : 'Update password →'}
           </button>
-          <button type="button" className="auth-link auth-back" onClick={() => go('forgot')}>
-            ← Send a new code
+          <button type="button" className="auth-link auth-back" onClick={() => switchMode('login')}>
+            ← Back to sign in
           </button>
         </form>
       )}

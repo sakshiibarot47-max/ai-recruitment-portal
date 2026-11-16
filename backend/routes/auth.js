@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database');
@@ -40,6 +41,33 @@ function publicUser(user) {
 
 function signToken(user) {
   return jwt.sign({ id: user.id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
+}
+
+// Password reset ka chhota token: OTP sahi hone ke baad milta hai, 10 minute chalta hai.
+// Alag secret se bana hai, isliye login token ki jagah nahi chal sakta. Password badalte hi purana token bekaar.
+const RESET_TOKEN_MINUTES = 10;
+const resetSecret = () => `${process.env.JWT_SECRET}:password-reset`;
+
+function resetFingerprint(user) {
+  return crypto.createHmac('sha256', resetSecret()).update(user.password).digest('hex').slice(0, 16);
+}
+
+function signResetToken(user) {
+  return jwt.sign({ id: user.id, purpose: 'password-reset', fp: resetFingerprint(user) }, resetSecret(), {
+    expiresIn: `${RESET_TOKEN_MINUTES}m`,
+  });
+}
+
+function userFromResetToken(token) {
+  try {
+    const payload = jwt.verify(String(token || ''), resetSecret());
+    if (payload.purpose !== 'password-reset') return null;
+    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.id);
+    if (!user || !user.is_verified || resetFingerprint(user) !== payload.fp) return null;
+    return user;
+  } catch (err) {
+    return null;
+  }
 }
 
 // OTP kahan bhejna hai: phone ho to SMS, warna email
@@ -244,29 +272,60 @@ router.post('/forgot-password', async (req, res) => {
   res.json(generic);
 });
 
-// POST /auth/reset-password  { contact, code, newPassword }
-router.post('/reset-password', (req, res) => {
-  const body = req.body || {};
-  const contact = parseContact(body.contact);
-  const code = String(body.code || '').trim();
-
+// POST /auth/verify-reset-otp  { contact, code }  -> OTP sahi ho to resetToken (naya password page ke liye)
+router.post('/verify-reset-otp', (req, res) => {
+  const contact = parseContact(req.body && req.body.contact);
+  const code = String((req.body && req.body.code) || '').trim();
   if (!contact || !/^\d{6}$/.test(code)) {
     return res.status(400).json({ message: 'Enter the 6 digit code' });
   }
-  const problem = passwordProblem(body.newPassword);
-  if (problem) return res.status(400).json({ message: problem });
 
   const user = findUserByContact(contact);
   if (!user || !user.is_verified) {
     return res.status(400).json({ message: 'This code is incorrect or has expired. Please request a new one.' });
   }
 
-  // Naam / email / phone wala password abhi hi rok do, taaki OTP kharch na ho
-  const personalIssue = passwordProblem(body.newPassword, { name: user.name, email: user.email, phone: user.phone });
-  if (personalIssue) return res.status(400).json({ message: personalIssue });
-
   const result = checkOtp(user.id, 'reset', code);
   if (!result.ok) return otpFailure(res, result);
+
+  res.json({ message: 'Code verified', resetToken: signResetToken(user), expiresInMinutes: RESET_TOKEN_MINUTES });
+});
+
+// POST /auth/reset-password  { resetToken, newPassword }
+// (purana tareeka { contact, code, newPassword } abhi bhi chalta hai)
+router.post('/reset-password', (req, res) => {
+  const body = req.body || {};
+  const problem = passwordProblem(body.newPassword);
+  if (problem) return res.status(400).json({ message: problem });
+
+  let user;
+
+  if (body.resetToken) {
+    user = userFromResetToken(body.resetToken);
+    if (!user) {
+      return res.status(400).json({ message: 'This reset session has expired. Please start again.' });
+    }
+    const personalIssue = passwordProblem(body.newPassword, { name: user.name, email: user.email, phone: user.phone });
+    if (personalIssue) return res.status(400).json({ message: personalIssue });
+  } else {
+    const contact = parseContact(body.contact);
+    const code = String(body.code || '').trim();
+    if (!contact || !/^\d{6}$/.test(code)) {
+      return res.status(400).json({ message: 'Enter the 6 digit code' });
+    }
+
+    user = findUserByContact(contact);
+    if (!user || !user.is_verified) {
+      return res.status(400).json({ message: 'This code is incorrect or has expired. Please request a new one.' });
+    }
+
+    // Naam / email / phone wala password abhi hi rok do, taaki OTP kharch na ho
+    const personalIssue = passwordProblem(body.newPassword, { name: user.name, email: user.email, phone: user.phone });
+    if (personalIssue) return res.status(400).json({ message: personalIssue });
+
+    const result = checkOtp(user.id, 'reset', code);
+    if (!result.ok) return otpFailure(res, result);
+  }
 
   db.prepare('UPDATE users SET password = ? WHERE id = ?').run(bcrypt.hashSync(body.newPassword, 10), user.id);
   res.json({ message: 'Password updated. Please sign in with your new password.' });

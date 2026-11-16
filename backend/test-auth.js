@@ -102,6 +102,7 @@ async function main() {
     r = await call('POST', '/auth/verify-otp', { contact: phone, code });
     check('sahi OTP: account verify + token', r.status === 200 && r.data.token && r.data.user.phone === phone, r);
     const token = r.data.token;
+    const tokenOfLogin = token;
     r = await call('POST', '/auth/verify-otp', { contact: phone, code });
     check('wahi OTP dobara use nahi hota', r.status === 400, r);
     r = await call('GET', '/candidate/stats', null, { Authorization: 'Bearer ' + token });
@@ -151,7 +152,7 @@ async function main() {
     r = await call('POST', '/auth/verify-otp', { contact: lockContact, code: realLock });
     check('5 galat ke baad sahi OTP bhi band (429)', r.status === 429, r);
 
-    console.log('\nPassword bhool gaye (forgot / reset)');
+    console.log('\nPassword bhool gaye (forgot -> OTP -> naya password page)');
     const before = serverLog.length;
     r = await call('POST', '/auth/forgot-password', { contact: '9999999999' });
     const unknownMsg = r.data.message;
@@ -161,20 +162,39 @@ async function main() {
     const resetCode = lastOtpFor('+919876543210');
     check('reset OTP aaya', /^\d{6}$/.test(resetCode || ''), serverLog.slice(-200));
     const wrongReset = resetCode === '000000' ? '111111' : '000000';
-    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: wrongReset, newPassword: 'NewPass@456' });
-    check('galat reset OTP 400', r.status === 400, r);
-    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'weak' });
-    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'Ab@9876543210' });
-    check('reset me phone wala password reject (OTP bacha rehta hai)', r.status === 400 && /cannot contain/.test(r.data.message), r);
+    r = await call('POST', '/auth/verify-reset-otp', { contact: '9876543210', code: wrongReset });
+    check('galat reset OTP 400', r.status === 400 && /Incorrect code/.test(r.data.message), r);
+    r = await call('POST', '/auth/verify-reset-otp', { contact: '9999999999', code: resetCode });
+    check('anjaan number par verify 400', r.status === 400, r);
+    r = await call('POST', '/auth/verify-reset-otp', { contact: '9876543210', code: resetCode });
+    check('sahi OTP par resetToken mila', r.status === 200 && r.data.resetToken, r);
+    const resetToken = r.data.resetToken;
+    r = await call('POST', '/auth/verify-reset-otp', { contact: '9876543210', code: resetCode });
+    check('wahi OTP dobara use nahi hota', r.status === 400, r);
+    r = await call('GET', '/candidate/stats', null, { Authorization: 'Bearer ' + resetToken });
+    check('resetToken se login jaisa kaam nahi hota (401)', r.status === 401, r);
+    r = await call('POST', '/auth/reset-password', { resetToken: tokenOfLogin, newPassword: 'NewPass@456' });
+    check('login token resetToken ki jagah nahi chalta', r.status === 400, r);
+    r = await call('POST', '/auth/reset-password', { resetToken, newPassword: 'weak' });
     check('reset me kamzor password reject', r.status === 400, r);
-    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'NewPass@456' });
-    check('sahi OTP se password badla', r.status === 200, r);
+    r = await call('POST', '/auth/reset-password', { resetToken, newPassword: 'Ab@9876543210' });
+    check('reset me phone wala password reject', r.status === 400 && /cannot contain/.test(r.data.message), r);
+    r = await call('POST', '/auth/reset-password', { resetToken, newPassword: 'NewPass@456' });
+    check('resetToken se password badla (galat koshish ke baad bhi)', r.status === 200, r);
     r = await call('POST', '/auth/login', { identifier: '9876543210', password: 'Strong@123' });
     check('purana password ab nahi chalta', r.status === 401, r);
     r = await call('POST', '/auth/login', { identifier: '9876543210', password: 'NewPass@456' });
     check('naya password chalta hai', r.status === 200, r);
-    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'Another@789' });
-    check('reset OTP dobara use nahi hota', r.status === 400, r);
+    r = await call('POST', '/auth/reset-password', { resetToken, newPassword: 'Another@789' });
+    check('resetToken dobara use nahi hota', r.status === 400, r);
+    r = await call('POST', '/auth/reset-password', { resetToken: 'garbage', newPassword: 'Another@789' });
+    check('kharab token reject', r.status === 400, r);
+
+    await sleep(31000);
+    await call('POST', '/auth/forgot-password', { contact: '9876543210' });
+    const legacyCode = lastOtpFor('+919876543210');
+    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: legacyCode, newPassword: 'Legacy@789x' });
+    check('purana tareeka (contact + code + password) abhi bhi chalta hai', r.status === 200, r);
 
     console.log('\nSecurity');
     const forged = jwt.sign({ id: 1, role: 'recruiter' }, 'mysecretkey12345', { expiresIn: '1d' });
