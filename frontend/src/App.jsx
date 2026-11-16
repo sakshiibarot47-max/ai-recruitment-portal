@@ -20,6 +20,7 @@ import SavedJobsPage from './SavedJobsPage'
 import ProtectedRoute from './ProtectedRoute'
 import ResumeBuilder from './ResumeBuilder'
 import Logo from './Logo'
+import { BrowseByType, HowItWorks } from './HomeSections'
 import { Button } from './ui'
 import AuthPanel from './AuthPanel'
 
@@ -212,6 +213,7 @@ function AppContent() {
             <nav className="site-nav-links" aria-label="Main">
               <a href="#paths" onClick={() => setMenuOpen(false)}>Find work</a>
               <button type="button" onClick={() => goToAuth('register', 'recruiter')}>For recruiters</button>
+              <a href="#how" onClick={() => setMenuOpen(false)}>How it works</a>
               <a href="#features" onClick={() => setMenuOpen(false)}>Features</a>
               <a href="#about" onClick={() => setMenuOpen(false)}>About</a>
             </nav>
@@ -263,6 +265,13 @@ function AppContent() {
             notify={notify}
           />
         </section>
+
+        <BrowseByType onStart={() => goToAuth('register', 'candidate')} />
+
+        <HowItWorks
+          onCandidate={() => goToAuth('register', 'candidate')}
+          onRecruiter={() => goToAuth('register', 'recruiter')}
+        />
 
         <section className="content-section" id="features">
           <div className="section-heading">
