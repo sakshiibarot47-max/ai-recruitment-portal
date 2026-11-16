@@ -6,13 +6,16 @@ const NAME_PART_RE = /^[\p{L}][\p{L}'’-]{1,49}$/u
 const RESEND_SECONDS = 30
 
 const PASSWORD_RULES = [
-  { label: 'At least 8 characters', test: p => p.length >= 8 },
-  { label: 'One capital letter (A-Z)', test: p => /[A-Z]/.test(p) },
-  { label: 'One small letter (a-z)', test: p => /[a-z]/.test(p) },
-  { label: 'One number (0-9)', test: p => /[0-9]/.test(p) },
-  { label: 'One special character (@, #, !, ...)', test: p => /[^A-Za-z0-9]/.test(p) },
-  { label: 'No spaces', test: p => !/\s/.test(p) },
+  { test: p => p.length >= 8, message: 'Password must be at least 8 characters.' },
+  { test: p => !/\s/.test(p), message: 'Password cannot contain spaces.' },
+  { test: p => /[A-Z]/.test(p), message: 'Add at least one capital letter (A-Z).' },
+  { test: p => /[a-z]/.test(p), message: 'Add at least one small letter (a-z).' },
+  { test: p => /[0-9]/.test(p), message: 'Add at least one number (0-9).' },
+  { test: p => /[^A-Za-z0-9]/.test(p), message: 'Add at least one special character, like @ # ! $.' },
 ]
+
+// Bahut aasan password ke tukde (backend me bhi yahi list hai)
+const COMMON_PARTS = ['password', 'qwerty', '123456', 'abcdef', 'letmein', 'hireai']
 
 function isEmail(value) {
   return EMAIL_RE.test(value.trim())
@@ -40,23 +43,49 @@ function nameProblem(name) {
   return ''
 }
 
-function passwordProblem(password) {
+// Ek baar me sirf ek sabse pehli kami batata hai. context: { name, contacts: [email ya phone ...] }
+function passwordProblem(password, { name = '', contacts = [] } = {}) {
+  if (!password) return 'Enter a password.'
+
   const failed = PASSWORD_RULES.find(rule => !rule.test(password))
-  return failed ? `Password rule missing: ${failed.label}.` : ''
+  if (failed) return failed.message
+
+  const lower = password.toLowerCase()
+  if (COMMON_PARTS.some(part => lower.includes(part))) {
+    return 'This password is too easy to guess. Choose a different one.'
+  }
+
+  const mine = name.toLowerCase().split(/\s+/).filter(part => part.length >= 3)
+  contacts.forEach(value => {
+    const v = String(value || '').trim().toLowerCase()
+    if (v.includes('@')) {
+      const local = v.split('@')[0]
+      if (local.length >= 3) mine.push(local)
+    } else {
+      const digits = v.replace(/\D/g, '').slice(-10)
+      if (digits.length === 10) mine.push(digits)
+    }
+  })
+  if (mine.some(part => lower.includes(part))) {
+    return 'Password cannot contain your name, email or phone number.'
+  }
+  return ''
 }
 
-function PasswordField({ label, value, onChange, show, onToggle, autoComplete, placeholder }) {
+function PasswordField({ label, value, onChange, onBlur, show, onToggle, autoComplete, placeholder, error }) {
   return (
-    <label className="form-field">
+    <label className={`form-field${error ? ' has-error' : ''}`}>
       <span>{label}</span>
       <div className="password-wrap">
         <input
           type={show ? 'text' : 'password'}
           value={value}
           onChange={event => onChange(event.target.value)}
+          onBlur={onBlur}
           placeholder={placeholder}
           autoComplete={autoComplete}
           maxLength={64}
+          aria-invalid={error ? true : undefined}
           required
         />
         <button
@@ -68,19 +97,8 @@ function PasswordField({ label, value, onChange, show, onToggle, autoComplete, p
           {show ? 'Hide' : 'Show'}
         </button>
       </div>
+      {error && <small className="field-error" role="alert">{error}</small>}
     </label>
-  )
-}
-
-function PasswordRules({ password }) {
-  return (
-    <ul className="password-rules" aria-live="polite">
-      {PASSWORD_RULES.map(rule => (
-        <li key={rule.label} className={rule.test(password) ? 'ok' : ''}>
-          {rule.label}
-        </li>
-      ))}
-    </ul>
   )
 }
 
@@ -105,6 +123,7 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
   const [cooldown, setCooldown] = useState(0)
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const [passwordTouched, setPasswordTouched] = useState(false)
 
   useEffect(() => {
     if (cooldown <= 0) return undefined
@@ -118,12 +137,22 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
     setCode('')
     setPassword('')
     setShowPassword(false)
+    setPasswordTouched(false)
   }
 
   function switchMode(nextMode) {
     onModeChange(nextMode)
     go('form')
   }
+
+  // Naam / email / phone ka password me hona rokne ke liye
+  function passwordContext() {
+    if (view === 'reset') return { contacts: [pending.contact] }
+    return { name, contacts: role === 'recruiter' ? [email, phone] : [contact] }
+  }
+
+  // Red line sirf tab dikhti hai jab user ne password likh ke aage badha ho (ya submit dabaya ho)
+  const passwordError = passwordTouched ? passwordProblem(password, passwordContext()) : ''
 
   function fail(error) {
     const text = (error instanceof TypeError || error.message === 'Network Error')
@@ -197,8 +226,10 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
       payload = { name: name.trim(), contact: contact.trim(), role }
     }
 
-    const passwordIssue = passwordProblem(password)
-    if (passwordIssue) return problem(passwordIssue)
+    if (passwordProblem(password, passwordContext())) {
+      setPasswordTouched(true)
+      return undefined
+    }
     payload.password = password
 
     return run(async () => {
@@ -255,8 +286,10 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
   function submitReset(event) {
     event.preventDefault()
     if (!/^\d{6}$/.test(code)) return problem('Enter the 6 digit code.')
-    const passwordIssue = passwordProblem(password)
-    if (passwordIssue) return problem(passwordIssue)
+    if (passwordProblem(password, passwordContext())) {
+      setPasswordTouched(true)
+      return undefined
+    }
 
     return run(async () => {
       await resetPassword({ contact: pending.contact, code, newPassword: password })
@@ -428,10 +461,11 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
             onChange={setPassword}
             show={showPassword}
             onToggle={() => setShowPassword(value => !value)}
+            onBlur={() => password && setPasswordTouched(true)}
+            error={passwordError}
             autoComplete="new-password"
             placeholder="Create a password"
           />
-          <PasswordRules password={password} />
 
           {message && <div className="form-message" role="alert">{message}</div>}
 
@@ -524,10 +558,11 @@ export default function AuthPanel({ mode, onModeChange, role, onRoleChange, onSu
             onChange={setPassword}
             show={showPassword}
             onToggle={() => setShowPassword(value => !value)}
+            onBlur={() => password && setPasswordTouched(true)}
+            error={passwordError}
             autoComplete="new-password"
             placeholder="Create a new password"
           />
-          <PasswordRules password={password} />
 
           {message && <div className="form-message" role="alert">{message}</div>}
 

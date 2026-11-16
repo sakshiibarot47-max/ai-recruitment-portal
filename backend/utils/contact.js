@@ -36,16 +36,38 @@ function maskContact(contact) {
   return `${contact.value.slice(0, 3)}${'*'.repeat(5)}${contact.value.slice(-2)}`;
 }
 
-// Frontend ke rules jaise hi: 8+ akshar, A-Z, a-z, 0-9, special, koi space nahi
-function passwordProblem(password) {
+// Aasan / bahut common password ke tukde (chhote akshar me match hote hain)
+const COMMON_PARTS = ['password', 'qwerty', '123456', 'abcdef', 'letmein', 'hireai'];
+
+// Password ke rules (frontend jaise hi). Naam, email ya phone ho to usse milta-julta password bhi reject.
+// personal = { name, email, phone }
+function passwordProblem(password, personal = {}) {
   const p = String(password || '');
-  if (p.length < 8) return 'Password must be at least 8 characters';
-  if (p.length > 64) return 'Password must be 64 characters or fewer';
-  if (/\s/.test(p)) return 'Password must not contain spaces';
-  if (!/[A-Z]/.test(p)) return 'Password needs one capital letter';
-  if (!/[a-z]/.test(p)) return 'Password needs one small letter';
-  if (!/[0-9]/.test(p)) return 'Password needs one number';
-  if (!/[^A-Za-z0-9]/.test(p)) return 'Password needs one special character';
+  if (!p) return 'Enter a password.';
+  if (p.length < 8) return 'Password must be at least 8 characters.';
+  if (p.length > 64) return 'Password must be 64 characters or fewer.';
+  if (/\s/.test(p)) return 'Password cannot contain spaces.';
+  if (!/[A-Z]/.test(p)) return 'Add at least one capital letter (A-Z).';
+  if (!/[a-z]/.test(p)) return 'Add at least one small letter (a-z).';
+  if (!/[0-9]/.test(p)) return 'Add at least one number (0-9).';
+  if (!/[^A-Za-z0-9]/.test(p)) return 'Add at least one special character, like @ # ! $.';
+
+  const lower = p.toLowerCase();
+  if (COMMON_PARTS.some((part) => lower.includes(part))) {
+    return 'This password is too easy to guess. Choose a different one.';
+  }
+
+  const mine = [];
+  String(personal.name || '').toLowerCase().split(/\s+/).forEach((part) => {
+    if (part.length >= 3) mine.push(part);
+  });
+  const emailLocal = String(personal.email || '').toLowerCase().split('@')[0];
+  if (emailLocal.length >= 3) mine.push(emailLocal);
+  const phoneDigits = String(personal.phone || '').replace(/\D/g, '').slice(-10);
+  if (phoneDigits.length === 10) mine.push(phoneDigits);
+  if (mine.some((part) => lower.includes(part))) {
+    return 'Password cannot contain your name, email or phone number.';
+  }
   return null;
 }
 

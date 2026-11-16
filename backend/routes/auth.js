@@ -95,6 +95,9 @@ router.post('/register', async (req, res) => {
     return res.status(400).json({ message: 'Enter a valid email or phone number' });
   }
 
+  const personalIssue = passwordProblem(password, { name, email, phone });
+  if (personalIssue) return res.status(400).json({ message: personalIssue });
+
   let companyName = null;
   if (role === 'recruiter') {
     companyName = String(body.company_name || '').trim();
@@ -257,6 +260,10 @@ router.post('/reset-password', (req, res) => {
   if (!user || !user.is_verified) {
     return res.status(400).json({ message: 'This code is incorrect or has expired. Please request a new one.' });
   }
+
+  // Naam / email / phone wala password abhi hi rok do, taaki OTP kharch na ho
+  const personalIssue = passwordProblem(body.newPassword, { name: user.name, email: user.email, phone: user.phone });
+  if (personalIssue) return res.status(400).json({ message: personalIssue });
 
   const result = checkOtp(user.id, 'reset', code);
   if (!result.ok) return otpFailure(res, result);

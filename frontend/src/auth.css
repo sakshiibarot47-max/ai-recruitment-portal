@@ -11,3 +11,10 @@
 .form-field input.otp-input {
   text-align: center; font-size: 26px; font-weight: 700; letter-spacing: 0.45em; padding-left: 0.45em;
 }
+
+/* Password galat ho to sirf ek red line (rules ki list nahi) */
+.form-field .field-error {
+  display: block; margin-top: 6px; font-size: 13px; font-weight: 600;
+  line-height: 1.35; text-align: left; color: var(--error);
+}
+.form-field.has-error .password-wrap input { border-color: var(--error); }

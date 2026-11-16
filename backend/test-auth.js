@@ -64,6 +64,19 @@ async function main() {
     r = await call('POST', '/auth/login', { email: 'old.user@demo.com', password: 'password123' });
     check('purana frontend ka { email, password } format chalta hai', r.status === 200, r);
 
+    console.log('\nPassword ke rules');
+    for (const [label, body] of [
+      ['aasan password (Password@123) reject', { name: 'Anita Rao', contact: '9000011112', password: 'Password@123' }],
+      ['password me apna phone number reject', { name: 'Anita Rao', contact: '9000011111', password: 'Ab@9000011111' }],
+      ['password me email ka naam reject', { name: 'Anita Rao', contact: 'priya.sharma@x.com', password: 'Priya.sharma@1' }],
+      ['password me apna naam reject', { name: 'Neha Kapoor', contact: '9000011113', password: 'Kapoor@2024' }],
+    ]) {
+      r = await call('POST', '/auth/register', { ...body, role: 'candidate' });
+      check(label, r.status === 400, r);
+    }
+    r = await call('POST', '/auth/register', { name: 'Anita Rao', contact: '9000011114', password: 'nocapital@123', role: 'candidate' });
+    check('kami wali baat saaf likhi aati hai', r.status === 400 && /capital letter/.test(r.data.message), r.data);
+
     console.log('\nCandidate register (phone se)');
     r = await call('POST', '/auth/register', { name: 'Hiral Test', contact: '98765 43210', password: 'weak', role: 'candidate' });
     check('kamzor password reject', r.status === 400, r);
@@ -151,6 +164,8 @@ async function main() {
     r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: wrongReset, newPassword: 'NewPass@456' });
     check('galat reset OTP 400', r.status === 400, r);
     r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'weak' });
+    r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'Ab@9876543210' });
+    check('reset me phone wala password reject (OTP bacha rehta hai)', r.status === 400 && /cannot contain/.test(r.data.message), r);
     check('reset me kamzor password reject', r.status === 400, r);
     r = await call('POST', '/auth/reset-password', { contact: '9876543210', code: resetCode, newPassword: 'NewPass@456' });
     check('sahi OTP se password badla', r.status === 200, r);
@@ -176,7 +191,8 @@ async function main() {
     check('OTP kisi file me save nahi hua', !files.includes('email-preview.html') || !fs.readFileSync(path.join(__dirname, 'email-preview.html'), 'utf8').match(/\bcode\b.*\d{6}/));
     db.close();
   } finally {
-        server.kill();
+    server.kill();
+    // Windows me server band hone tak database file locked rehti hai, isliye exit ka intezaar
     await new Promise((resolve) => { server.once('exit', resolve); setTimeout(resolve, 2000); });
     try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) { /* temp folder baad me khud saaf ho jayega */ }
   }
