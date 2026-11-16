@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Logo from './Logo'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import './App.css'
 import './pages.css'
@@ -133,8 +134,7 @@ function JobDetails() {
             navigate('/dashboard')
           }}
         >
-          <span className="brand-icon">H</span>
-          <span>Hire<span>AI</span></span>
+          <Logo />
         </a>
 
         <button className="nav-button" onClick={() => navigate('/jobs')}>

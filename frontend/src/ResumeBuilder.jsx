@@ -414,48 +414,48 @@ function ResumeBuilder({ onBack }) {
       <style>{`
         .rb-app{min-height:100vh;background:#f3f6fb;color:#18263d;padding-bottom:40px}
         .rb-top{background:#fff;padding:18px 5%;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e5eaf2}
-        .rb-top button,.rb-button{border:0;border-radius:9px;padding:11px 18px;background:#173b68;color:white;cursor:pointer;font-weight:600}
+        .rb-top button,.rb-button{border:0;border-radius:9px;padding:11px 18px;background:#132c68;color:white;cursor:pointer;font-weight:600}
         .rb-container{max-width:1200px;margin:30px auto;padding:0 20px}
-        .rb-heading h1{margin:0 0 8px;font-size:30px}.rb-heading p{color:#68768a}
+        .rb-heading h1{margin:0 0 8px;font-size:30px}.rb-heading p{color:#66718a}
         .rb-steps{display:flex;gap:10px;margin:24px 0;flex-wrap:wrap}
         .rb-step{padding:10px 16px;border-radius:9px;background:#e5eaf2;color:#56647a}
-        .rb-step.active{background:#173b68;color:white}
+        .rb-step.active{background:#132c68;color:white}
         .rb-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,.9fr);gap:22px;align-items:start}
         .rb-panel{background:white;border:1px solid #e4e9f1;border-radius:15px;padding:22px;box-shadow:0 5px 20px #1c35500a}
         .rb-panel h2{margin-top:0;font-size:21px}
         .rb-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
-        .rb-field{display:flex;flex-direction:column;gap:7px;margin-bottom:15px;font-size:13px;font-weight:650;color:#34445c}
+        .rb-field{display:flex;flex-direction:column;gap:7px;margin-bottom:15px;font-size:13px;font-weight:650;color:#323f5c}
         .rb-field input,.rb-field textarea{width:100%;box-sizing:border-box;border:1px solid #d8dfeb;border-radius:8px;padding:11px;font:inherit;font-weight:400;color:#17243a;background:#fff}
-        .rb-field textarea{resize:vertical}.rb-field input:focus,.rb-field textarea:focus{outline:2px solid #b6d5ff;border-color:#4388d6}
+        .rb-field textarea{resize:vertical}.rb-field input:focus,.rb-field textarea:focus{outline:2px solid #b2c9ff;border-color:#3c6ad6}
         .rb-required{color:#df3434}.rb-error{color:#d22;font-weight:500}
         .rb-entry{border:1px solid #e3e9f1;padding:15px;border-radius:10px;margin:14px 0}
         .rb-entry-head{display:flex;justify-content:space-between;align-items:center}
-        .rb-remove,.rb-add{border:0;background:#edf4ff;color:#174c85;border-radius:7px;padding:8px 12px;cursor:pointer}
+        .rb-remove,.rb-add{border:0;background:#edf4ff;color:#113485;border-radius:7px;padding:8px 12px;cursor:pointer}
         .rb-add{margin-bottom:15px;font-weight:600}
         .rb-actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px}
-        .rb-secondary{background:#eaf0f7!important;color:#173b68!important}
+        .rb-secondary{background:#eaf0f7!important;color:#132c68!important}
         .rb-designs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
         .rb-design{border:2px solid #e2e8f0;background:white;border-radius:10px;padding:15px;text-align:left;cursor:pointer}
-        .rb-design.selected{border-color:#2878c8;background:#f1f7ff}
-        .rb-design strong,.rb-design span{display:block}.rb-design span{font-size:12px;color:#718096;margin-top:5px}
+        .rb-design.selected{border-color:#2052c8;background:#f1f7ff}
+        .rb-design strong,.rb-design span{display:block}.rb-design span{font-size:12px;color:#6f7b96;margin-top:5px}
         .rb-paper{background:white;color:#222;padding:32px;min-height:500px;box-shadow:0 5px 25px #17243a18;font-family:Arial,sans-serif}
-        .rb-resume-header{text-align:center;border-bottom:2px solid #23466f;padding-bottom:15px}
-        .rb-resume-header h1{font-size:25px;margin:0 0 5px}.rb-resume-header h2{font-size:15px;color:#345b84;margin:0 0 10px}
+        .rb-resume-header{text-align:center;border-bottom:2px solid #1f376f;padding-bottom:15px}
+        .rb-resume-header h1{font-size:25px;margin:0 0 5px}.rb-resume-header h2{font-size:15px;color:#304984;margin:0 0 10px}
         .rb-resume-header p{font-size:10px;overflow-wrap:anywhere}
-        .rb-resume-section{margin-top:20px}.rb-resume-section h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#23466f;border-bottom:1px solid #cbd5e1;padding-bottom:6px}
+        .rb-resume-section{margin-top:20px}.rb-resume-section h3{font-size:13px;text-transform:uppercase;letter-spacing:1px;color:#1f376f;border-bottom:1px solid #cad1e1;padding-bottom:6px}
         .rb-resume-section p,.rb-resume-entry{font-size:11px;line-height:1.55;white-space:pre-line}
         .rb-resume-entry{margin:10px 0}.rb-resume-entry strong,.rb-resume-entry span,.rb-resume-entry small{display:block}
-        .rb-resume-entry small{color:#65748a}
-        .rb-corporate{border-top:9px solid #173b68}.rb-corporate .rb-resume-header{text-align:left}
+        .rb-resume-entry small{color:#636f8a}
+        .rb-corporate{border-top:9px solid #132c68}.rb-corporate .rb-resume-header{text-align:left}
         .rb-ats{box-shadow:none;padding:20px}.rb-ats .rb-resume-header{text-align:left;border-color:#333}
         .rb-ats .rb-resume-section h3{color:#222}
         .rb-creative .rb-resume-header{background:#edf5ff;padding:20px;border-radius:8px}
-        .rb-creative .rb-resume-section h3{color:#1672b8}
-        .rb-hint{font-size:12px;color:#6c7b90;margin-top:8px}
+        .rb-creative .rb-resume-section h3{color:#0e41b8}
+        .rb-hint{font-size:12px;color:#6a7690;margin-top:8px}
         .rb-save-status{padding:11px 14px;border-radius:9px;margin:14px 0;font-size:13px}
         .rb-save-success{background:#eaf8ef;color:#176b38}
         .rb-save-error{background:#fff0f0;color:#b42318}
-        .rb-save-loading{background:#eef4fc;color:#315b88}
+        .rb-save-loading{background:#eef4fc;color:#2d4888}
         .rb-save-button{margin:12px 0;background:#14734a!important}
         .rb-save-button:disabled{opacity:.6;cursor:not-allowed}
         @media(max-width:800px){.rb-layout{grid-template-columns:1fr}.rb-grid{grid-template-columns:1fr}.rb-container{padding:0 12px}.rb-paper{padding:20px}}
@@ -470,7 +470,7 @@ function ResumeBuilder({ onBack }) {
       `}</style>
 
       <header className="rb-top">
-        <strong>Hire<span style={{color:'#3687d7'}}>AI</span> | Resume Builder</strong>
+        <strong>Hire<span style={{color:'#2e61d7'}}>AI</span> | Resume Builder</strong>
         <button onClick={onBack}>← Dashboard</button>
       </header>
 

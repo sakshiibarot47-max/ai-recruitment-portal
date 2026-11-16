@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Logo from './Logo'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { getCandidateStats, getSavedJobs, getRecruiterStats } from './api'
 import { normalizeStatus } from './utils'
@@ -27,8 +28,7 @@ export function PageHeader({ backLabel = '← Dashboard', backTo = '/dashboard' 
           navigate('/dashboard')
         }}
       >
-        <span className="brand-icon">H</span>
-        <span>Hire<span>AI</span></span>
+        <Logo />
       </a>
 
       <button className="nav-button" onClick={() => navigate(backTo)}>

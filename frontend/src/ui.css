@@ -15,7 +15,7 @@
 
 .ui-btn-primary { background: var(--brand-deep); color: #fff; }
 .ui-btn-primary:hover:not(:disabled) { background: var(--brand-deep-hover); }
-.ui-btn-accent { background: var(--accent); color: var(--ink); }
+.ui-btn-accent { background: var(--accent); color: #fff; }
 .ui-btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
 .ui-btn-secondary { background: var(--surface); color: var(--brand-deep); border-color: var(--border); }
 .ui-btn-secondary:hover:not(:disabled) { background: var(--brand-ice-faint); border-color: var(--brand-ice); }
@@ -40,7 +40,7 @@
   background: var(--surface); color: var(--ink); font: inherit; font-size: 15px;
 }
 .ui-input::placeholder { color: var(--muted); }
-.ui-input:hover { border-color: #b7d3df; }
+.ui-input:hover { border-color: #b8c7ea; }
 .ui-field-error .ui-input { border-color: var(--error); }
 .ui-field-msg { margin: 0; font-size: 13px; color: var(--muted); }
 .ui-field-msg-error { color: var(--error); }
@@ -64,7 +64,7 @@
 /* ---------- Modal ---------- */
 .ui-modal-backdrop {
   position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
-  padding: 16px; background: rgba(11, 42, 51, .55);
+  padding: 16px; background: rgba(9, 22, 51, .55);
 }
 .ui-modal {
   width: 100%; max-width: 480px; max-height: calc(100vh - 32px); overflow: auto;

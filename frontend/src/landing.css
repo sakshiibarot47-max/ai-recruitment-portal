@@ -125,7 +125,7 @@ html { scroll-padding-top: 84px; }
 .how-panel-dark { background: var(--brand-deep); border-color: var(--brand-deep); }
 .how-panel-dark h3, .how-panel-dark .how-steps strong { color: #fff; }
 .how-panel-dark .how-panel-sub, .how-panel-dark .how-steps span { color: var(--brand-ice); }
-.how-panel-dark .how-steps li::after { background: rgba(186, 230, 253, 0.3); }
+.how-panel-dark .how-steps li::after { background: rgba(201, 220, 250, 0.3); }
 
 @media (max-width: 900px) {
   .type-grid, .how-grid { grid-template-columns: 1fr; }
@@ -135,3 +135,11 @@ html { scroll-padding-top: 84px; }
   .type-card, .type-arrow { transition: none; }
   .type-card:hover { transform: none; }
 }
+
+/* Dark panel par accent button safed dikhe (royal blue navy par kam dikhta hai) */
+.how-panel-dark .ui-btn-accent { background: #fff; color: var(--brand-deep); }
+.how-panel-dark .ui-btn-accent:hover:not(:disabled) { background: var(--brand-ice); }
+
+.about-logo { display: block; height: 76px; width: auto; margin-bottom: 8px; }
+.logo-mark, .logo-wordmark { display: block; max-width: none; }
+.logo { gap: 10px; }

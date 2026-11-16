@@ -32,15 +32,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9caaaf;
+    --text: #9ba1af;
     --text-h: #f0f6f9;
-    --bg: #161c1d;
-    --border: #2e383a;
-    --code-bg: #1f2628;
+    --bg: #16181d;
+    --border: #2d313a;
+    --code-bg: #1f2128;
     --accent: #c084fc;
     --accent-bg: rgba(192, 132, 252, 0.15);
     --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 56, 58, 0.5);
+    --social-bg: rgba(46, 50, 58, 0.5);
     --shadow:
       rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
   }

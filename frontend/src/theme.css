@@ -1,29 +1,33 @@
 /* ==========================================================
-   HireAI theme: Deep Teal + Ice (+ Amber accent)
+   HireAI theme: logo ke rang (Navy + Royal Blue + Sky Blue)
    Ye file sabse last me load hoti hai (responsive.css se pehle).
    Rang badalne ho to sirf yahan ke variables badlo.
    ========================================================== */
 
 :root {
-  /* Brand */
-  --brand-deep: #0f4c5c;        /* Deep Teal: navbar, main buttons, headings */
-  --brand-deep-hover: #0b3a47;
-  --brand-teal: #0f766e;        /* Teal: links, icons on light background */
-  --brand-ice: #bae6fd;         /* Ice: highlights, light fills */
-  --brand-ice-soft: #e0f2fe;    /* Cloud */
-  --brand-ice-faint: #f0f9ff;
+  /* Brand: HireAI logo se liye gaye rang */
+  --brand-navy: #00124d;        /* logo ka "Hire" */
+  --brand-deep: #03247b;        /* Deep blue: dark panels, main buttons, headings */
+  --brand-deep-hover: #021a5c;
+  --brand-royal: #0b4bd8;       /* Royal blue: links, icons, call-to-action */
+  --brand-teal: var(--brand-royal);   /* purana naam, ab royal blue */
+  --brand-azure: #1a8cff;       /* Sky blue: chhote highlights */
+  --brand-ice: #c9dcfa;         /* Light fills */
+  --brand-ice-soft: #e3edfd;
+  --brand-ice-faint: #f2f6ff;
 
-  /* Accent (call-to-action buttons) */
-  --accent: #f59e0b;            /* Amber */
-  --accent-hover: #d98206;
+  /* Call-to-action buttons */
+  --accent: #0b4bd8;
+  --accent-hover: #093cae;
+  --on-accent: #ffffff;
 
   /* Surfaces and text */
-  --bg: #f4fafd;
+  --bg: #f4f7ff;
   --surface: #ffffff;
-  --ink: #0b2a33;
-  --text: #3c5560;
-  --muted: #526c76;
-  --border: #d5e7ef;
+  --ink: #08164d;
+  --text: #3a4a7a;
+  --muted: #566590;
+  --border: #d6e0f5;
 
   /* Status */
   --success: #16a34a;
@@ -31,18 +35,18 @@
   --error: #dc2626;
   --error-soft: #fee2e2;
   --warning: #d97706;
-  --info: #0369a1;
+  --info: #0b4bd8;
 
   /* Shape and shadow */
   --radius: 12px;
-  --shadow: 0 18px 55px rgba(15, 76, 92, 0.1);
+  --shadow: 0 18px 55px rgba(3, 36, 123, 0.12);
 
   /* Old variable names used in App.css now point to the new theme */
   --page: var(--bg);
-  --fern: var(--brand-teal);
+  --fern: var(--brand-royal);
   --fern-dark: var(--brand-deep);
-  --fern-light: #d3effc;
-  --fern-soft: #eaf7fd;
+  --fern-light: #d9e6fc;
+  --fern-soft: #edf3ff;
   --saffron: var(--accent);
   --saffron-hover: var(--accent-hover);
 }
@@ -58,9 +62,12 @@ select:focus-visible,
 textarea:focus-visible { outline-offset: 0; }
 
 /* Status colours stay meaningful (Applied grey, Shortlisted blue, Interview purple, Offer green, Rejected red) */
-.hs-applied { background: #eef0f3; color: #52606d; }
-.hs-shortlisted { background: #e0f2fe; color: #0369a1; }
+.hs-applied { background: #eef0f3; color: #51596d; }
+.hs-shortlisted { background: #e3edfd; color: #0030a1; }
 .ra-seg.hs-applied,
-.ra-dot.hs-applied { background: #9aa5b1; }
+.ra-dot.hs-applied { background: #99a0b1; }
 .ra-seg.hs-shortlisted,
-.ra-dot.hs-shortlisted { background: #0ea5e9; }
+.ra-dot.hs-shortlisted { background: #0348e9; }
+
+/* Login ke baad ke pages: text left se shuru (pehle #root ki wajah se beech me aa jata tha) */
+.app[class*="-page"] { text-align: left; }

@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useState } from 'react'
+import Logo from './Logo'
 import './App.css'
 import './pages.css'
 import { normalizeStatus, scoreValue, formatDate } from './utils'
@@ -126,8 +127,7 @@ function ApplicationsPage({ onBack }) {
             onBack()
           }}
         >
-          <span className="brand-icon">H</span>
-          <span>Hire<span>AI</span></span>
+          <Logo />
         </a>
 
         <button className="nav-button" onClick={onBack}>

@@ -1,5 +1,6 @@
 
 import './App.css'
+import Logo from './Logo'
 import './pages.css'
 import { CandidateStats } from './components'
 
@@ -81,8 +82,7 @@ function Dashboard({ user, onLogout, onNavigate }) {
             onNavigate('dashboard')
           }}
         >
-          <span className="brand-icon">H</span>
-          <span>Hire<span>AI</span></span>
+          <Logo />
         </a>
 
         <div className="dashboard-nav-actions">

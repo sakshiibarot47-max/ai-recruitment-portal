@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import Logo from './Logo'
 import { Link, useNavigate } from 'react-router-dom'
 import './App.css'
 import './pages.css'
@@ -135,8 +136,7 @@ function ProfilePage({ onLogout }) {
             navigate('/dashboard')
           }}
         >
-          <span className="brand-icon">H</span>
-          <span>Hire<span>AI</span></span>
+          <Logo />
         </a>
 
         <button className="nav-button" onClick={() => navigate('/dashboard')}>

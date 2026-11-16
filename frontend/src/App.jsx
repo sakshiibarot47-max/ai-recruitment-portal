@@ -302,7 +302,7 @@ function AppContent() {
         </section>
 
         <section className="about-section" id="about">
-          <div className="about-mark">H</div>
+          <img className="about-logo" src="/logo-mark.png" alt="" height="76" decoding="async" />
 
           <div>
             <span className="form-kicker">ABOUT HIREAI</span>
@@ -326,7 +326,7 @@ function AppContent() {
 
       <footer className="site-footer">
         <span>© {new Date().getFullYear()} HireAI</span>
-        <span>Connecting people with possibilities.</span>
+        <span>Dream Job. Made Easy.</span>
       </footer>
     </div>
   )
