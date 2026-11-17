@@ -884,3 +884,10 @@
 .dashboard-welcome h1,
 .dashboard-welcome p,
 .dashboard-account-strip strong { overflow-wrap: anywhere; }
+
+/* AI summary text under a candidate name */
+.rc-summary { display: block; margin-top: 6px; max-width: 320px; font-size: 0.85rem; line-height: 1.4; opacity: 0.85; }
+
+/* Sort dropdown on the jobs page */
+.find-sort { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
+.find-sort select { padding: 8px 10px; border-radius: 10px; border: 1px solid #d5deea; background: #fff; font: inherit; }

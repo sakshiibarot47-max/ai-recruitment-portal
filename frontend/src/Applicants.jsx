@@ -292,6 +292,9 @@ function Applicants() {
                               {applicant.name || 'Candidate'}
                             </strong>
                             <span className="rc-email">{applicant.email}</span>
+                            {applicant.ai_summary && (
+                              <span className="rc-summary">{applicant.ai_summary}</span>
+                            )}
                           </td>
 
                           <td data-label="Match score">

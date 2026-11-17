@@ -182,6 +182,7 @@ export const getJobsPage = async (filters = {}) => {
       search: filters.search || '',
       location: filters.location || '',
       type: filters.type || '',
+      sort: filters.sort || undefined,
       page: filters.page || 1,
       limit: filters.limit || 6,
     },

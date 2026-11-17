@@ -268,6 +268,12 @@ function JobDetails() {
                   {result.success.missingSkills?.join(', ') || 'None detected'}
                 </p>
 
+                <p>
+                  <b>AI summary:</b>{' '}
+                  {result.success.aiSummary ||
+                    'Not available (a basic keyword match was used).'}
+                </p>
+
                 {result.success.note && <small>{result.success.note}</small>}
 
                 <Link className="jd-track-link" to="/my-applications">

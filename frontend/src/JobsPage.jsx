@@ -21,10 +21,11 @@ function JobsPage({ onBack }) {
   const [search, setSearch] = useState('')
   const [location, setLocation] = useState('')
   const [type, setType] = useState('')
+  const [sort, setSort] = useState('newest')
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [totalJobs, setTotalJobs] = useState(0)
-  const [applied, setApplied] = useState({ search: '', location: '', type: '' })
+  const [applied, setApplied] = useState({ search: '', location: '', type: '', sort: 'newest' })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [selectedFiles, setSelectedFiles] = useState({})
@@ -42,7 +43,8 @@ function JobsPage({ onBack }) {
     const filters = {
       search: (overrides.search ?? search).trim(),
       location: (overrides.location ?? location).trim(),
-      type: overrides.type ?? type
+      type: overrides.type ?? type,
+      sort: overrides.sort ?? sort
     }
 
     try {
@@ -288,6 +290,21 @@ function JobsPage({ onBack }) {
             <h2>Explore Opportunities</h2>
             <p>Find a role that moves your career forward.</p>
           </div>
+          <label className="find-sort">
+            <span>Sort by</span>
+            <select
+              value={sort}
+              onChange={event => {
+                setSort(event.target.value)
+                loadJobs({ ...applied, sort: event.target.value })
+              }}
+            >
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+              <option value="title">Job title (A-Z)</option>
+              <option value="company">Company (A-Z)</option>
+            </select>
+          </label>
           <span>
             {loading ? 'Loading...' : `${totalJobs} ${totalJobs === 1 ? 'job' : 'jobs'} found`}
           </span>
@@ -443,6 +460,12 @@ function JobsPage({ onBack }) {
                       <p>
                         <b>Missing skills:</b>{' '}
                         {result.success.missingSkills?.join(', ') || 'None detected'}
+                      </p>
+
+                      <p>
+                        <b>AI summary:</b>{' '}
+                        {result.success.aiSummary ||
+                          'Not available (a basic keyword match was used).'}
                       </p>
 
                       {result.success.note && <small>{result.success.note}</small>}
