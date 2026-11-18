@@ -220,6 +220,7 @@ function ApplicationsPage({ onBack }) {
               <span>⌕</span>
               <input
                 type="search"
+                aria-label="Search your applications"
                 placeholder="Search jobs or companies..."
                 value={search}
                 onChange={event => setSearch(event.target.value)}

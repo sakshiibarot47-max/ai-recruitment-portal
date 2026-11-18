@@ -6,7 +6,7 @@ import { scoreValue } from './utils'
 
 // "Jobs for you": jobs matched to the skills saved in the candidate's profile
 function RecommendedJobs() {
-  const [state, setState] = useState({ loading: true, jobs: [], failed: false })
+  const [state, setState] = useState({ loading: true, jobs: [], failed: false, message: '' })
 
   useEffect(() => {
     let active = true
@@ -14,11 +14,18 @@ function RecommendedJobs() {
     getRecommendedJobs()
       .then(list => {
         if (active) {
-          setState({ loading: false, jobs: Array.isArray(list) ? list : [], failed: false })
+          setState({ loading: false, jobs: Array.isArray(list) ? list : [], failed: false, message: '' })
         }
       })
-      .catch(() => {
-        if (active) setState({ loading: false, jobs: [], failed: true })
+      .catch(err => {
+        if (active) {
+          setState({
+            loading: false,
+            jobs: [],
+            failed: true,
+            message: err.message || 'Could not load recommended jobs.',
+          })
+        }
       })
 
     return () => {
@@ -26,7 +33,27 @@ function RecommendedJobs() {
     }
   }, [])
 
-  if (state.loading || state.failed) return null
+  if (state.loading) {
+    return (
+      <section className="rec-hint" aria-live="polite">
+        <div>
+          <strong>Jobs for you</strong>
+          <span>Loading...</span>
+        </div>
+      </section>
+    )
+  }
+
+  if (state.failed) {
+    return (
+      <section className="rec-hint" role="alert">
+        <div>
+          <strong>Could not load recommended jobs</strong>
+          <span>{state.message}</span>
+        </div>
+      </section>
+    )
+  }
 
   if (state.jobs.length === 0) {
     return (

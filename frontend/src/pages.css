@@ -915,3 +915,13 @@
 .pfm-import strong { color: var(--ink); }
 .pfm-import p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
 .pfm-import-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.find-sort select {
+  min-width: 170px;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #dfebf1;
+  border-radius: 10px;
+  background: #fbfdfe;
+  color: #08164d;
+  font-size: 13px;
+}
