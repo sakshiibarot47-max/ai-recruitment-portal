@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import './pages.css'
-import { getMyProfile, updateMyProfile } from './api'
+import { getMyProfile, updateMyProfile, importProfileFromResume } from './api'
 import { Notice } from './components'
 
 // [field, label, input type, max length (same as backend), placeholder]
@@ -21,6 +21,10 @@ function ProfileForm() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [resumeFile, setResumeFile] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const [importError, setImportError] = useState('')
+  const [importDone, setImportDone] = useState('')
 
   useEffect(() => {
     let active = true
@@ -50,6 +54,74 @@ function ProfileForm() {
   function updateField(event) {
     setForm({ ...form, [event.target.name]: event.target.value })
     setSuccess('')
+  }
+
+  function handleResumePick(event) {
+    const file = event.target.files?.[0] || null
+
+    setImportError('')
+    setImportDone('')
+    setResumeFile(null)
+
+    if (!file) return
+
+    if (
+      file.type !== 'application/pdf' ||
+      !file.name.toLowerCase().endsWith('.pdf')
+    ) {
+      setImportError('Please choose a PDF file.')
+      event.target.value = ''
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setImportError('The file is larger than 5 MB. Please choose a smaller PDF.')
+      event.target.value = ''
+      return
+    }
+
+    setResumeFile(file)
+  }
+
+  // Fills the form from the resume. Nothing is lost: the user can edit, then press "Save profile".
+  async function handleImport() {
+    if (!resumeFile) {
+      setImportError('Please choose a PDF resume first.')
+      return
+    }
+
+    setImporting(true)
+    setImportError('')
+    setImportDone('')
+
+    try {
+      const data = await importProfileFromResume(resumeFile)
+      const extracted = data.extractedData || {}
+      const filled = []
+      const next = { ...form }
+
+      FIELDS.forEach(([name, label, , max]) => {
+        const value = extracted[name]
+
+        if (typeof value === 'string' && value.trim()) {
+          next[name] = value.trim().slice(0, max)
+          filled.push(label.toLowerCase())
+        }
+      })
+
+      setForm(next)
+      setSuccess('')
+
+      setImportDone(
+        filled.length
+          ? `Imported ${filled.join(' and ')} from your resume. Please check it, edit if needed, then click "Save profile".`
+          : 'We could not find details in this resume. Please fill the form yourself.'
+      )
+    } catch (err) {
+      setImportError(err.message || 'Could not read your resume.')
+    } finally {
+      setImporting(false)
+    }
   }
 
   async function handleSubmit(event) {
@@ -105,6 +177,34 @@ function ProfileForm() {
 
       <div className="pfm-progress" aria-hidden="true">
         <span style={{ width: `${completeness}%` }} />
+      </div>
+
+      <div className="pfm-import">
+        <div>
+          <strong>Import from resume</strong>
+          <p>Choose your PDF resume (max 5 MB) to fill the form. You can edit before saving.</p>
+        </div>
+
+        <div className="pfm-import-row">
+          <input
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={handleResumePick}
+            aria-label="Choose your resume (PDF)"
+          />
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleImport}
+            disabled={importing || !resumeFile}
+          >
+            {importing ? 'Reading resume...' : 'Import from resume'}
+          </button>
+        </div>
+
+        <Notice onClose={() => setImportError('')}>{importError}</Notice>
+        <Notice type="success" onClose={() => setImportDone('')}>{importDone}</Notice>
       </div>
 
       <form className="pfm-form" onSubmit={handleSubmit}>

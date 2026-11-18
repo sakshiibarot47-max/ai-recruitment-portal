@@ -891,3 +891,27 @@
 /* Sort dropdown on the jobs page */
 .find-sort { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; }
 .find-sort select { padding: 8px 10px; border-radius: 10px; border: 1px solid #d5deea; background: #fff; font: inherit; }
+
+/* Edit and delete buttons on My jobs */
+.rc-job-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.rc-job-editing { display: block; }
+.rc-edit-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.rc-danger-button {
+  padding: 10px 16px;
+  border: 1px solid #f0c9c2;
+  border-radius: 12px;
+  background: var(--danger-bg, #fff0ed);
+  color: var(--danger, #a33b31);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.rc-danger-button:hover:not(:disabled) { background: #fde0da; }
+.rc-danger-button:disabled { opacity: 0.55; cursor: not-allowed; }
+.rc-danger-button:focus-visible { outline: 3px solid #f0c9c2; outline-offset: 2px; }
+
+/* Import from resume box on the profile page */
+.pfm-import { display: grid; gap: 12px; margin: 0 0 20px; padding: 16px 18px; border: 1px dashed #b9c7d6; border-radius: 14px; background: #f7fafd; text-align: left; }
+.pfm-import strong { color: var(--ink); }
+.pfm-import p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.pfm-import-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }

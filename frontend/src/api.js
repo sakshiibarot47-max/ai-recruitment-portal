@@ -205,6 +205,15 @@ export const getMyProfile = async () => {
   return response.data;
 };
 
+// Reads a PDF resume and returns { extractedData: { skills, education, ... } }
+export const importProfileFromResume = async (resumeFile) => {
+  const formData = new FormData();
+  formData.append('resume', resumeFile);
+
+  const response = await apiClient.post('/profile/auto-fill-resume', formData);
+  return response.data;
+};
+
 export const updateMyProfile = async (profile) => {
   const response = await apiClient.put('/profile/me', profile);
   return response.data;
@@ -312,6 +321,16 @@ export const getMyInterviews = async () => {
 // RECRUITER APIs (for Kinjal's pages)
 export const createJob = async (jobData) => {
   const response = await apiClient.post('/jobs', jobData);
+  return response.data;
+};
+
+export const updateJob = async (jobId, jobData) => {
+  const response = await apiClient.put(`/jobs/${jobId}`, jobData);
+  return response.data;
+};
+
+export const deleteJob = async (jobId) => {
+  const response = await apiClient.delete(`/jobs/${jobId}`);
   return response.data;
 };
 

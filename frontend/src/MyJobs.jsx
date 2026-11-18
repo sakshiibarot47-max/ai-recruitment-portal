@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import './App.css'
 import './pages.css'
-import { getJobs, getApplicants, getUser } from './api'
+import { getJobs, getApplicants, getUser, updateJob, deleteJob } from './api'
 import { PageHeader, RecruiterTabs, Notice, RecruiterAnalytics } from './components'
 import { JOB_TYPES, normalizeStatus, skillList } from './utils'
 
@@ -16,6 +16,18 @@ function MyJobs() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState('All')
   const [refreshCount, setRefreshCount] = useState(0)
+  const [notice, setNotice] = useState('')
+  const [editingId, setEditingId] = useState(null)
+  const [editForm, setEditForm] = useState({
+    title: '',
+    company: '',
+    location: '',
+    type: JOB_TYPES[0],
+    skills: '',
+    description: '',
+  })
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [deletingId, setDeletingId] = useState(null)
 
   const fetchMyJobs = useCallback(async () => {
     const data = await getJobs()
@@ -80,6 +92,77 @@ function MyJobs() {
       setError(err.message || 'Could not load your jobs.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  function startEdit(job) {
+    setError('')
+    setNotice('')
+    setEditingId(job.id)
+    setEditForm({
+      title: job.title || '',
+      company: job.company || '',
+      location: job.location || '',
+      type: JOB_TYPES.includes(job.type) ? job.type : JOB_TYPES[0],
+      skills: job.skills || '',
+      description: job.description || '',
+    })
+  }
+
+  function updateEditField(event) {
+    const { name, value } = event.target
+    setEditForm(current => ({ ...current, [name]: value }))
+  }
+
+  async function saveEdit(event) {
+    event.preventDefault()
+    setError('')
+    setNotice('')
+
+    if (
+      !editForm.title.trim() ||
+      !editForm.company.trim() ||
+      !editForm.skills.trim() ||
+      !editForm.description.trim()
+    ) {
+      setError('Title, company, skills and description cannot be empty.')
+      return
+    }
+
+    setSavingEdit(true)
+
+    try {
+      await updateJob(editingId, editForm)
+      setEditingId(null)
+      setNotice('Job updated successfully.')
+      await loadJobs()
+    } catch (err) {
+      setError(err.message || 'Could not update the job.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  async function handleDelete(job) {
+    const sure = window.confirm(
+      `Delete "${job.title}"? This cannot be undone.`
+    )
+
+    if (!sure) return
+
+    setError('')
+    setNotice('')
+    setDeletingId(job.id)
+
+    try {
+      await deleteJob(job.id)
+      setNotice('Job deleted.')
+      await loadJobs()
+    } catch (err) {
+      // For a job that has applications the backend says: "This job has applications and cannot be deleted"
+      setError(err.message || 'Could not delete the job.')
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -194,6 +277,7 @@ function MyJobs() {
         </div>
 
         <Notice onClose={() => setError('')}>{error}</Notice>
+        <Notice type="success" onClose={() => setNotice('')}>{notice}</Notice>
 
         {loading ? (
           <div className="rc-empty">
@@ -230,6 +314,106 @@ function MyJobs() {
               const applicants = applicantsByJob[job.id]
               const count = Array.isArray(applicants) ? applicants.length : null
 
+              if (editingId === job.id) {
+                return (
+                  <article className="rc-job-card rc-job-editing" key={job.id}>
+                    <form
+                      className="auth-form manage-jobs-form"
+                      onSubmit={saveEdit}
+                      noValidate
+                    >
+                      <h3>Edit job</h3>
+
+                      <label className="form-field">
+                        <span>Job title *</span>
+                        <input
+                          name="title"
+                          value={editForm.title}
+                          onChange={updateEditField}
+                          maxLength={120}
+                          required
+                        />
+                      </label>
+
+                      <label className="form-field">
+                        <span>Company *</span>
+                        <input
+                          name="company"
+                          value={editForm.company}
+                          onChange={updateEditField}
+                          maxLength={120}
+                          required
+                        />
+                      </label>
+
+                      <div className="manage-jobs-two-col">
+                        <label className="form-field">
+                          <span>Location</span>
+                          <input
+                            name="location"
+                            value={editForm.location}
+                            onChange={updateEditField}
+                            maxLength={120}
+                          />
+                        </label>
+
+                        <label className="form-field">
+                          <span>Job type</span>
+                          <select
+                            name="type"
+                            value={editForm.type}
+                            onChange={updateEditField}
+                          >
+                            {JOB_TYPES.map(type => (
+                              <option key={type}>{type}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <label className="form-field">
+                        <span>Required skills *</span>
+                        <input
+                          name="skills"
+                          value={editForm.skills}
+                          onChange={updateEditField}
+                          required
+                        />
+                      </label>
+
+                      <label className="form-field">
+                        <span>Job description *</span>
+                        <textarea
+                          name="description"
+                          value={editForm.description}
+                          onChange={updateEditField}
+                          rows={6}
+                          required
+                        />
+                      </label>
+
+                      <div className="rc-edit-actions">
+                        <button
+                          type="submit"
+                          className="primary-button"
+                          disabled={savingEdit}
+                        >
+                          {savingEdit ? 'Saving...' : 'Save changes'}
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => setEditingId(null)}
+                          disabled={savingEdit}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </article>
+                )
+              }
+
               return (
                 <article className="rc-job-card" key={job.id}>
                   <div className="rc-job-main">
@@ -264,6 +448,25 @@ function MyJobs() {
                     >
                       View applicants →
                     </Link>
+
+                    <div className="rc-job-actions">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => startEdit(job)}
+                        disabled={deletingId === job.id}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="rc-danger-button"
+                        onClick={() => handleDelete(job)}
+                        disabled={deletingId === job.id}
+                      >
+                        {deletingId === job.id ? 'Deleting...' : 'Delete'}
+                      </button>
+                    </div>
                   </div>
                 </article>
               )
