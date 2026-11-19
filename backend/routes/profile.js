@@ -158,13 +158,18 @@ router.post('/auto-fill-resume', verifyToken, requireRole('candidate'), upload.s
       }
     }
     
-    // Call Gemini AI or fallback parser
-    let parsedData = {};
+    // Read the resume with Gemini. We never invent skills: if it fails the user fills the form themselves.
+    let parsedData;
     try {
       parsedData = await parseResumeWithGemini(filePath);
     } catch (aiErr) {
-      console.log('AI parsing failed, using fallback:', aiErr.message);
-      parsedData = { skills: 'JavaScript, Node.js, Python', education: 'B.Sc. IT / M.Sc. IT' };
+      console.log('AI parsing failed:', aiErr.message);
+      if (filePath && fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+      return res.status(503).json({
+        message: 'We could not read your resume right now. Please fill the form yourself or try again in a minute.'
+      });
     }
 
     // Clean up local temp file
@@ -177,8 +182,8 @@ router.post('/auto-fill-resume', verifyToken, requireRole('candidate'), upload.s
       INSERT INTO profiles (user_id, skills, education, resume_url, updated_at)
       VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
       ON CONFLICT(user_id) DO UPDATE SET
-        skills = COALESCE(?, skills),
-        education = COALESCE(?, education),
+        skills = COALESCE(NULLIF(?, ''), skills),
+        education = COALESCE(NULLIF(?, ''), education),
         resume_url = COALESCE(?, resume_url),
         updated_at = CURRENT_TIMESTAMP
     `).run(

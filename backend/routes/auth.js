@@ -241,7 +241,7 @@ router.post('/login', (req, res) => {
   const user = findUserByContact(contact);
   const passwordMatches = bcrypt.compareSync(password, user ? user.password : DUMMY_HASH);
   if (!user || !passwordMatches) {
-    return res.status(401).json({ message: 'Invalid email, phone number or password' });
+    return res.status(401).json({ message: 'Invalid email or password' });
   }
 
   if (!user.is_verified) {
