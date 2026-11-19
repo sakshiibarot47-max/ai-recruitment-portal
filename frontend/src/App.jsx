@@ -20,6 +20,7 @@ import SavedJobsPage from './SavedJobsPage'
 import ProtectedRoute from './ProtectedRoute'
 import ResumeBuilder from './ResumeBuilder'
 import Logo from './Logo'
+import InterviewsPage from './InterviewsPage'
 import { BrowseByType, HowItWorks } from './HomeSections'
 import { Button } from './ui'
 import AuthPanel from './AuthPanel'
@@ -118,6 +119,7 @@ function AppContent() {
                   onNavigate={(page) => {
                     const paths = {
                       jobs: '/jobs',
+                      interviews: '/interviews',
                       'saved-jobs': '/saved-jobs',
                       applications: '/my-applications',
                       'resume-builder': '/resume-builder',
@@ -134,6 +136,7 @@ function AppContent() {
             />
 
             <Route path="/profile" element={<ProfilePage onLogout={logout} />} />
+            <Route path="/interviews" element={<InterviewsPage />} />
 
             <Route element={<ProtectedRoute allowedRole="candidate" />}>
               <Route

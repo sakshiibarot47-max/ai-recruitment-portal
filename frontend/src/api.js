@@ -394,5 +394,21 @@ export const openResume = async (applicationId) => {
   }
 };
 
+// NOTIFICATIONS
+export const getNotifications = async () => {
+  const response = await apiClient.get('/notifications');
+  return response.data;
+};
+
+export const markNotificationRead = async (id) => {
+  const response = await apiClient.put(`/notifications/${id}/read`);
+  return response.data;
+};
+
+export const markAllNotificationsRead = async () => {
+  const response = await apiClient.put('/notifications/read-all');
+  return response.data;
+};
+
 // Export axios instance if required
 export default apiClient;

@@ -53,3 +53,33 @@ export function skillList(skills) {
     .map(skill => skill.trim())
     .filter(Boolean)
 }
+
+// Server ka time UTC me hota hai ("2026-11-17 09:33:37"). User ke local time me dikhao.
+export function formatDateTime(value) {
+  if (!value) return '—'
+
+  const text = String(value)
+  const parsed = new Date(
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}/.test(text) ? text.replace(' ', 'T') + 'Z' : text
+  )
+
+  if (Number.isNaN(parsed.getTime())) return '—'
+
+  return parsed.toLocaleString('en-IN', {
+    day: '2-digit',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  })
+}
+
+// Interview ka time "2026-11-05 14:30" jaisa saved hota hai. Jaisa saved hai waisa hi dikhao (timezone nahi badalna).
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function formatInterviewTime(value) {
+  const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/)
+  if (!match) return value ? String(value) : '—'
+
+  return `${Number(match[3])} ${MONTHS[Number(match[2]) - 1]} ${match[1]}, ${match[4]}:${match[5]}`
+}

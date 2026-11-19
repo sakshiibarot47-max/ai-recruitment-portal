@@ -1,3 +1,4 @@
+import NotificationBell from './NotificationBell'
 import { useEffect, useState } from 'react'
 import Logo from './Logo'
 import { NavLink, useNavigate } from 'react-router-dom'
@@ -31,7 +32,8 @@ export function PageHeader({ backLabel = '← Dashboard', backTo = '/dashboard' 
         <Logo />
       </a>
 
-      <button className="nav-button" onClick={() => navigate(backTo)}>
+      <NotificationBell />
+        <button className="nav-button" onClick={() => navigate(backTo)}>
         {backLabel}
       </button>
     </header>
@@ -47,6 +49,9 @@ export function RecruiterTabs() {
       </NavLink>
       <NavLink to="/recruiter/post-job" className="rc-tab">
         Post a Job
+      </NavLink>
+      <NavLink to="/interviews" className="rc-tab">
+        Interviews
       </NavLink>
     </nav>
   )

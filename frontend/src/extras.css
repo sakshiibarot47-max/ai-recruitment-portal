@@ -1,0 +1,64 @@
+/* Notification bell, interviews, modals aur chhote extras. Rang theme.css ke variables se. */
+
+/* ---------- Notification bell ---------- */
+.navbar .notif { position: relative; margin-left: auto; margin-right: 12px; }
+.dashboard-nav-actions .notif { margin: 0; }
+.notif-button {
+  position: relative; display: inline-grid; place-items: center; width: 42px; height: 42px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface);
+  color: var(--brand-deep); cursor: pointer;
+}
+.notif-button:hover { background: var(--brand-ice-soft); }
+.notif-badge {
+  position: absolute; top: -6px; right: -6px; min-width: 20px; height: 20px; padding: 0 5px;
+  display: grid; place-items: center; border-radius: 999px; background: var(--error); color: #fff;
+  font-size: 11px; font-weight: 800; line-height: 1; border: 2px solid var(--surface); box-sizing: content-box;
+}
+.notif-panel {
+  position: absolute; right: 0; top: calc(100% + 10px); z-index: 60;
+  width: min(380px, calc(100vw - 32px)); max-height: 440px; overflow: auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  box-shadow: var(--shadow); text-align: left;
+}
+.notif-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.notif-head strong { color: var(--ink); font-size: 15px; }
+.notif-link { border: 0; background: transparent; padding: 0; font: inherit; font-size: 13px; font-weight: 700; color: var(--brand-royal); cursor: pointer; }
+.notif-link:disabled { color: var(--muted); cursor: default; }
+.notif-link:hover:not(:disabled) { text-decoration: underline; }
+.notif-list { margin: 0; padding: 0; list-style: none; }
+.notif-item {
+  display: grid; gap: 4px; width: 100%; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--border);
+  background: transparent; font: inherit; text-align: left; cursor: pointer; color: var(--text); font-size: 14px; line-height: 1.45;
+}
+.notif-item:hover { background: var(--brand-ice-faint); }
+.notif-item small { color: var(--muted); font-size: 12px; }
+.notif-item.unread { background: var(--brand-ice-faint); color: var(--ink); font-weight: 600; box-shadow: inset 3px 0 0 var(--brand-royal); }
+.notif-empty { margin: 0; padding: 26px 16px; text-align: center; color: var(--muted); font-size: 14px; }
+.notif-error { margin: 12px 16px 0; padding: 10px 12px; border-radius: 10px; background: var(--error-soft); color: #991b1b; font-size: 13px; font-weight: 600; }
+
+/* ---------- Interviews list ---------- */
+.iv-list { display: grid; gap: 14px; margin: 24px 0 0; padding: 0; list-style: none; }
+.iv-card {
+  display: grid; grid-template-columns: 190px 1fr auto; gap: 20px; align-items: start;
+  padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: 18px; text-align: left;
+}
+.iv-when { font-size: 16px; font-weight: 800; color: var(--brand-deep); }
+.iv-main h3 { margin: 0 0 4px; font-size: 18px; color: var(--ink); }
+.iv-sub { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--text); }
+.iv-line { margin: 4px 0 0; font-size: 14px; color: var(--muted); overflow-wrap: anywhere; }
+.iv-line a { color: var(--brand-royal); font-weight: 600; }
+.iv-notes { font-style: italic; }
+@media (max-width: 720px) {
+  .iv-card { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* ---------- Popup forms ---------- */
+.modal-form { display: grid; gap: 14px; }
+.modal-text { margin: 0 0 4px; font-size: 15px; line-height: 1.6; color: var(--text); }
+.modal-form .form-message, .ui-modal-body .form-message { margin-top: 4px; }
+.ui-modal-body textarea.ui-input { resize: vertical; }
+
+/* Phone par bell ka panel poori width me, screen ke andar */
+@media (max-width: 520px) {
+  .notif-panel { position: fixed; top: 74px; left: 16px; right: 16px; width: auto; max-height: calc(100vh - 100px); }
+}

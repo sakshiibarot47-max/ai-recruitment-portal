@@ -1,3 +1,4 @@
+import NotificationBell from './NotificationBell'
 import { useEffect, useState } from 'react'
 import Logo from './Logo'
 import { Link, useNavigate, useParams } from 'react-router-dom'
@@ -137,6 +138,7 @@ function JobDetails() {
           <Logo />
         </a>
 
+        <NotificationBell />
         <button className="nav-button" onClick={() => navigate('/jobs')}>
           ← All jobs
         </button>

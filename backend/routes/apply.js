@@ -82,6 +82,20 @@ router.post(
       console.log('Notification could not be created:', notifErr.message);
     }
 
+    // In-app notification for the recruiter who owns this job
+    try {
+      const applicant = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+      if (job.recruiter_id) {
+        createNotification(
+          job.recruiter_id,
+          `New application for "${job.title}" from ${applicant ? applicant.name : 'a candidate'}.`,
+          'APPLICATION'
+        );
+      }
+    } catch (notifErr) {
+      console.log('Recruiter notification could not be created:', notifErr.message);
+    }
+
     // Email the candidate that the application was received
     try {
       const candidate = db.prepare('SELECT name, email FROM users WHERE id = ?').get(req.user.id);

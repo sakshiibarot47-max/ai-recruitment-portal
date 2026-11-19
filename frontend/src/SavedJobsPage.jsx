@@ -1,3 +1,4 @@
+import NotificationBell from './NotificationBell'
 
 import { useEffect, useMemo, useState } from 'react'
 import Logo from './Logo'
@@ -73,6 +74,7 @@ function SavedJobsPage({ onBack }) {
           <Logo />
         </a>
 
+        <NotificationBell />
         <button className="nav-button" onClick={onBack}>
           ← Dashboard
         </button>

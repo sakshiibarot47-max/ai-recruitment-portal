@@ -1,3 +1,4 @@
+import NotificationBell from './NotificationBell'
 import { useEffect, useState } from 'react'
 import Logo from './Logo'
 import { Link, useNavigate } from 'react-router-dom'
@@ -139,6 +140,7 @@ function ProfilePage({ onLogout }) {
           <Logo />
         </a>
 
+        <NotificationBell />
         <button className="nav-button" onClick={() => navigate('/dashboard')}>
           ← Dashboard
         </button>

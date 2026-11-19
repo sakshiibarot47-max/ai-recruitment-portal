@@ -4,6 +4,7 @@ import './App.css'
 import './pages.css'
 import { getJob, getApplicants, updateStatus, openResume } from './api'
 import { PageHeader, RecruiterTabs, Notice } from './components'
+import { ScheduleInterviewModal } from './Modals'
 import { STATUSES, formatDate, normalizeStatus, scoreValue } from './utils'
 
 function Applicants() {
@@ -21,6 +22,7 @@ function Applicants() {
   const [sortBy, setSortBy] = useState('score')
   const [updatingId, setUpdatingId] = useState(null)
   const [openingId, setOpeningId] = useState(null)
+  const [schedulingFor, setSchedulingFor] = useState(null)
 
   const fetchAll = useCallback(async () => {
     const [jobData, applicantData] = await Promise.all([
@@ -276,6 +278,7 @@ function Applicants() {
                       <th>Status</th>
                       <th>Applied</th>
                       <th>Resume</th>
+                      <th>Interview</th>
                     </tr>
                   </thead>
 
@@ -291,7 +294,7 @@ function Applicants() {
                             <strong className="rc-name">
                               {applicant.name || 'Candidate'}
                             </strong>
-                            <span className="rc-email">{applicant.email}</span>
+                            <span className="rc-email">{applicant.email || applicant.phone}</span>
                             {applicant.ai_summary && (
                               <span className="rc-summary">{applicant.ai_summary}</span>
                             )}
@@ -347,6 +350,20 @@ function Applicants() {
                                 : 'View resume'}
                             </button>
                           </td>
+
+                          <td data-label="Interview">
+                            {status === 'Offer' || status === 'Rejected' ? (
+                              <span className="rc-muted">—</span>
+                            ) : (
+                              <button
+                                type="button"
+                                className="secondary-button rc-resume-button"
+                                onClick={() => setSchedulingFor(applicant)}
+                              >
+                                Schedule interview
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       )
                     })}
@@ -355,6 +372,19 @@ function Applicants() {
               </div>
             )}
           </>
+        )}
+
+        {schedulingFor && (
+          <ScheduleInterviewModal
+            applicant={schedulingFor}
+            onClose={() => setSchedulingFor(null)}
+            onScheduled={message => {
+              setSchedulingFor(null)
+              setError('')
+              setNotice(message)
+              load()
+            }}
+          />
         )}
       </main>
     </div>

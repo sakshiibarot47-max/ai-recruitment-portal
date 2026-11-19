@@ -120,7 +120,7 @@ router.get('/:id/applicants', verifyToken, requireRole('recruiter'), (req, res) 
 
   const applicants = db
     .prepare(
-      `SELECT a.id AS application_id, u.id AS candidate_id, u.name, u.email, a.resume_path,
+      `SELECT a.id AS application_id, u.id AS candidate_id, u.name, u.email, u.phone, a.resume_path,
               a.status, a.match_score, a.ai_summary, a.applied_at
        FROM applications a
        JOIN users u ON u.id = a.candidate_id

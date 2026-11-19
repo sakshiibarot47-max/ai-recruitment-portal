@@ -1,3 +1,4 @@
+import NotificationBell from './NotificationBell'
 
 import './App.css'
 import Logo from './Logo'
@@ -31,6 +32,14 @@ function Dashboard({ user, onLogout, onNavigate }) {
       description: 'Track application statuses and manage your submitted job applications.',
       link: 'Track applications',
       tag: 'MY ACTIVITY',
+    },
+    {
+      id: 'interviews',
+      icon: '◷',
+      title: 'My Interviews',
+      description: 'See the interviews that recruiters have scheduled for your applications.',
+      link: 'View interviews',
+      tag: 'SCHEDULE',
     },
     {
       id: 'resume-builder',
@@ -67,6 +76,14 @@ function Dashboard({ user, onLogout, onNavigate }) {
       link: 'Review candidates',
       tag: 'TALENT',
     },
+    {
+      id: 'interviews',
+      icon: '◷',
+      title: 'Interviews',
+      description: 'See every interview you have scheduled, earliest first.',
+      link: 'View interviews',
+      tag: 'SCHEDULE',
+    },
   ]
 
   const features = isRecruiter ? recruiterFeatures : candidateFeatures
@@ -86,6 +103,7 @@ function Dashboard({ user, onLogout, onNavigate }) {
         </a>
 
         <div className="dashboard-nav-actions">
+          <NotificationBell />
           <span className="dashboard-user-role">
             {isRecruiter ? 'Recruiter Account' : 'Candidate Account'}
           </span>

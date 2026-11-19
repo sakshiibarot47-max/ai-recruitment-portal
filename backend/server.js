@@ -71,6 +71,12 @@ app.use('/recruiter', recruiterRoutes);
 const candidateStatsRoutes = require('./routes/candidateStats');
 app.use('/candidate', candidateStatsRoutes);
 
+const interviewRoutes = require('./routes/interviews');
+app.use('/interviews', interviewRoutes);
+
+const notificationRoutes = require('./routes/notifications');
+app.use('/notifications', notificationRoutes);
+
 // Health Check Routes
 app.get('/', (req, res) => res.send('Backend is running'));
 app.get('/api/health', (req, res) => res.json({ status: 'ok', message: 'Recruitment API is alive' }));

@@ -6,6 +6,7 @@ import './theme.css'
 import './ui.css'
 import './landing.css'
 import './auth.css'
+import './extras.css'
 import './responsive.css'
 
 createRoot(document.getElementById('root')).render(
