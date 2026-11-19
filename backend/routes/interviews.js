@@ -104,6 +104,109 @@ router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
   res.status(201).json({ message: 'Interview scheduled', interviewId: result.lastInsertRowid });
 });
 
+// PUT /interviews/:id  (recruiter only: change the time, mode, link/address or notes)
+// Body: { scheduledAt, mode, location, notes }  (send only what changed)
+// The candidate gets an in-app notification and an email when something changed.
+router.put('/:id', verifyToken, requireRole('recruiter'), (req, res) => {
+  const interview = db
+    .prepare(
+      'SELECT i.id, i.application_id, i.scheduled_at, i.mode, i.location, i.notes, ' +
+      'j.recruiter_id, j.title, j.company, a.candidate_id, u.name, u.email ' +
+      'FROM interviews i ' +
+      'JOIN applications a ON a.id = i.application_id ' +
+      'JOIN jobs j ON j.id = a.job_id ' +
+      'JOIN users u ON u.id = a.candidate_id ' +
+      'WHERE i.id = ?'
+    )
+    .get(req.params.id);
+
+  if (!interview) {
+    return res.status(404).json({ message: 'Interview not found' });
+  }
+  if (interview.recruiter_id !== req.user.id) {
+    return res.status(403).json({ message: 'This interview is not for your job' });
+  }
+
+  const body = req.body || {};
+  const scheduledAt = body.scheduledAt !== undefined ? String(body.scheduledAt) : interview.scheduled_at;
+  const mode = body.mode !== undefined ? body.mode : interview.mode;
+  const location = body.location !== undefined ? String(body.location).trim() || null : interview.location;
+  const notes = body.notes !== undefined ? String(body.notes).trim() || null : interview.notes;
+
+  const timeChanged = scheduledAt !== interview.scheduled_at;
+
+  if (timeChanged) {
+    if (!TIME_FORMAT.test(scheduledAt)) {
+      return res.status(400).json({ message: 'scheduledAt must look like 2026-11-05 14:30' });
+    }
+    const when = new Date(scheduledAt.replace(' ', 'T'));
+    if (isNaN(when.getTime())) {
+      return res.status(400).json({ message: 'scheduledAt is not a valid date' });
+    }
+    if (when.getTime() <= Date.now()) {
+      return res.status(400).json({ message: 'Interview time must be in the future' });
+    }
+  }
+  if (!MODES.includes(mode)) {
+    return res.status(400).json({ message: 'mode must be Online or In-person' });
+  }
+
+  const modeChanged = mode !== interview.mode;
+  const locationChanged = (location || null) !== (interview.location || null);
+  const notesChanged = (notes || null) !== (interview.notes || null);
+
+  if (!timeChanged && !modeChanged && !locationChanged && !notesChanged) {
+    return res.json({ message: 'No changes to save' });
+  }
+
+  // Clash check (ignore this interview itself)
+  if (timeChanged) {
+    const clash = db
+      .prepare(
+        'SELECT i.id FROM interviews i ' +
+        'JOIN applications a ON a.id = i.application_id ' +
+        'JOIN jobs j ON j.id = a.job_id ' +
+        'WHERE j.recruiter_id = ? AND i.scheduled_at = ? AND i.id != ?'
+      )
+      .get(req.user.id, scheduledAt, interview.id);
+    if (clash) {
+      return res.status(409).json({ message: 'You already have an interview at this time' });
+    }
+  }
+
+  db.prepare('UPDATE interviews SET scheduled_at = ?, mode = ?, location = ?, notes = ? WHERE id = ?')
+    .run(scheduledAt, mode, location, notes, interview.id);
+
+  // In-app notification for the candidate
+  try {
+    createNotification(
+      interview.candidate_id,
+      timeChanged
+        ? `Your interview for "${interview.title}" at ${interview.company || 'Company'} has been rescheduled to ${scheduledAt}.`
+        : `The details of your interview for "${interview.title}" at ${interview.company || 'Company'} (${scheduledAt}) were updated.`,
+      'INTERVIEW'
+    );
+  } catch (notifErr) {
+    console.log('Notification could not be created:', notifErr.message);
+  }
+
+  // Email the candidate the new details
+  sendMail({
+    to: interview.email,
+    subject: (timeChanged ? 'Interview rescheduled: ' : 'Interview updated: ') + interview.title + ' at ' + interview.company,
+    text:
+      'Hello ' + interview.name + ',\n\n' +
+      'Your interview for ' + interview.title + ' at ' + interview.company + ' was ' + (timeChanged ? 'rescheduled' : 'updated') + '.\n\n' +
+      'Date and time: ' + scheduledAt + '\n' +
+      'Mode: ' + mode + '\n' +
+      (location ? 'Link or address: ' + location + '\n' : '') +
+      (notes ? 'Notes: ' + notes + '\n' : '') +
+      '\nGood luck!\nHireAI Recruitment',
+  });
+
+  res.json({ message: 'Interview updated' });
+});
+
 // GET /interviews  (recruiter only: all interviews for their jobs, earliest first)
 router.get('/', verifyToken, requireRole('recruiter'), (req, res) => {
   const rows = db
