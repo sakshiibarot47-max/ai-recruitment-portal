@@ -2,16 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import './App.css'
 import './pages.css'
-import { getJob, getApplicants, updateStatus, openResume } from './api'
+import { getJob, getApplicants, updateStatus, openResume, getRecruiterInterviews } from './api'
 import { PageHeader, RecruiterTabs, Notice } from './components'
 import { ScheduleInterviewModal } from './Modals'
-import { STATUSES, formatDate, normalizeStatus, scoreValue } from './utils'
+import { STATUSES, formatDate, formatInterviewTime, normalizeStatus, scoreValue } from './utils'
 
 function Applicants() {
   const { id: jobId } = useParams()
 
   const [job, setJob] = useState(null)
   const [applicants, setApplicants] = useState([])
+  const [interviews, setInterviews] = useState([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [error, setError] = useState('')
@@ -25,14 +26,16 @@ function Applicants() {
   const [schedulingFor, setSchedulingFor] = useState(null)
 
   const fetchAll = useCallback(async () => {
-    const [jobData, applicantData] = await Promise.all([
+    const [jobData, applicantData, interviewData] = await Promise.all([
       getJob(jobId),
       getApplicants(jobId),
+      getRecruiterInterviews().catch(() => []),
     ])
 
     return {
       jobData,
       applicantData: Array.isArray(applicantData) ? applicantData : [],
+      interviewData: Array.isArray(interviewData) ? interviewData : [],
     }
   }, [jobId])
 
@@ -40,11 +43,12 @@ function Applicants() {
     let active = true
 
     fetchAll()
-      .then(({ jobData, applicantData }) => {
+      .then(({ jobData, applicantData, interviewData }) => {
         if (!active) return
 
         setJob(jobData)
         setApplicants(applicantData)
+        setInterviews(interviewData)
       })
       .catch(err => {
         if (active) setLoadError(err.message || 'Could not load applicants.')
@@ -58,15 +62,22 @@ function Applicants() {
     }
   }, [fetchAll])
 
+  // application_id -> saved interview (so the button can say Reschedule)
+  const interviewByApplication = useMemo(
+    () => new Map(interviews.map(item => [item.application_id, item])),
+    [interviews]
+  )
+
   async function load() {
     setLoading(true)
     setLoadError('')
 
     try {
-      const { jobData, applicantData } = await fetchAll()
+      const { jobData, applicantData, interviewData } = await fetchAll()
 
       setJob(jobData)
       setApplicants(applicantData)
+      setInterviews(interviewData)
     } catch (err) {
       setLoadError(err.message || 'Could not load applicants.')
     } finally {
@@ -352,6 +363,13 @@ function Applicants() {
                           </td>
 
                           <td data-label="Interview">
+                            {interviewByApplication.get(applicant.application_id) && (
+                              <span className="rc-interview-time">
+                                {formatInterviewTime(
+                                  interviewByApplication.get(applicant.application_id).scheduled_at
+                                )}
+                              </span>
+                            )}
                             {status === 'Offer' || status === 'Rejected' ? (
                               <span className="rc-muted">—</span>
                             ) : (
@@ -360,7 +378,9 @@ function Applicants() {
                                 className="secondary-button rc-resume-button"
                                 onClick={() => setSchedulingFor(applicant)}
                               >
-                                Schedule interview
+                                {interviewByApplication.get(applicant.application_id)
+                                  ? 'Reschedule'
+                                  : 'Schedule interview'}
                               </button>
                             )}
                           </td>
@@ -377,6 +397,7 @@ function Applicants() {
         {schedulingFor && (
           <ScheduleInterviewModal
             applicant={schedulingFor}
+            interview={interviewByApplication.get(schedulingFor.application_id)}
             onClose={() => setSchedulingFor(null)}
             onScheduled={message => {
               setSchedulingFor(null)

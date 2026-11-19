@@ -62,3 +62,23 @@
 @media (max-width: 520px) {
   .notif-panel { position: fixed; top: 74px; left: 16px; right: 16px; width: auto; max-height: calc(100vh - 100px); }
 }
+
+/* ---------- Easy date and time picker (interview popup) ---------- */
+.dt-label { margin: 0 0 8px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.dt-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 8px; }
+.dt-chip {
+  display: grid; gap: 2px; padding: 10px 6px; border: 1px solid #d5deea; border-radius: 12px;
+  background: #fff; color: var(--ink); font: inherit; font-size: 15px; font-weight: 700;
+  text-align: center; cursor: pointer;
+}
+.dt-chip small { font-size: 13px; font-weight: 500; color: var(--muted); }
+.dt-chip:hover { border-color: var(--brand-royal); }
+.dt-chip:focus-visible { outline: 3px solid #bcd0ff; outline-offset: 2px; }
+.dt-chip-on { background: var(--brand-royal); border-color: var(--brand-royal); color: #fff; }
+.dt-chip-on small { color: #fff; opacity: 0.9; }
+.dt-summary { margin: -4px 0 0; padding: 10px 12px; border-radius: 10px; background: #eef4ff; font-size: 15px; color: var(--ink); }
+.modal-form select.ui-input, .modal-form input[type='date'].ui-input { min-height: 46px; font-size: 16px; }
+
+/* Edit button on the interviews page, and the saved time under Applicants */
+.iv-actions { margin-top: 10px; }
+.rc-interview-time { display: block; margin-bottom: 6px; font-size: 13px; font-weight: 700; color: var(--brand-deep); }

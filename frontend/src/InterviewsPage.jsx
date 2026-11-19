@@ -3,15 +3,22 @@ import './App.css'
 import './pages.css'
 import { getMyInterviews, getRecruiterInterviews, getUser } from './api'
 import { PageHeader, RecruiterTabs, Notice } from './components'
+import { ScheduleInterviewModal } from './Modals'
 import { formatInterviewTime } from './utils'
 
 // Ek hi page dono ke liye: candidate ko apne interviews, recruiter ko apni jobs ke interviews (jaldi wala pehle)
+// Recruiter yahan se interview ka time, mode, link ya notes badal sakta hai (Edit).
 function InterviewsPage() {
   const isRecruiter = getUser()?.role?.toLowerCase() === 'recruiter'
 
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const [editing, setEditing] = useState(null)
+
+  // Bumping this number loads the list again (after an interview is edited)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     let active = true
@@ -31,7 +38,7 @@ function InterviewsPage() {
     return () => {
       active = false
     }
-  }, [isRecruiter])
+  }, [isRecruiter, reloadKey])
 
   return (
     <div className="app manage-jobs-page">
@@ -53,6 +60,7 @@ function InterviewsPage() {
         {isRecruiter && <RecruiterTabs />}
 
         <Notice onClose={() => setError('')}>{error}</Notice>
+        <Notice type="success" onClose={() => setNotice('')}>{notice}</Notice>
 
         {loading ? (
           <div className="rc-empty">
@@ -92,12 +100,41 @@ function InterviewsPage() {
                     </p>
                   )}
                   {item.notes && <p className="iv-line iv-notes">{item.notes}</p>}
+
+                  {isRecruiter && (
+                    <div className="iv-actions">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => {
+                          setNotice('')
+                          setEditing(item)
+                        }}
+                      >
+                        Edit interview
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <span className="job-type">{item.mode || 'Online'}</span>
               </li>
             ))}
           </ul>
+        )}
+
+        {editing && (
+          <ScheduleInterviewModal
+            applicant={{ name: editing.candidate_name }}
+            interview={editing}
+            onClose={() => setEditing(null)}
+            onScheduled={message => {
+              setEditing(null)
+              setError('')
+              setNotice(message)
+              setReloadKey(key => key + 1)
+            }}
+          />
         )}
       </main>
     </div>

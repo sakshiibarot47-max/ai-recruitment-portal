@@ -358,6 +358,11 @@ export const createInterview = async (interviewData) => {
   return response.data;
 };
 
+export const updateInterview = async (interviewId, interviewData) => {
+  const response = await apiClient.put(`/interviews/${interviewId}`, interviewData);
+  return response.data;
+};
+
 // OPEN RESUME (Recruiter)
 // Window click ke time hi khulti hai taaki popup blocker na roke
 export const openResume = async (applicationId) => {
