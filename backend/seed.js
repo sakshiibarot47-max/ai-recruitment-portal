@@ -28,6 +28,7 @@ const insertUser = db.prepare(`
 
 const recruiterId = insertUser.run('Demo Recruiter', 'recruiter@demo.com', hashedPassword, 'recruiter').lastInsertRowid;
 const candidateId = insertUser.run('Sakshi Barot', 'sakshi@demo.com', hashedPassword, 'candidate').lastInsertRowid;
+insertUser.run('Savi Barot', 'savi@demo.com', hashedPassword, 'candidate');
 
 // Test accounts named in the final-phase task (password: Test@1234)
 const testPassword = bcrypt.hashSync('Test@1234', 10);
