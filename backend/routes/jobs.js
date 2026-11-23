@@ -1,14 +1,16 @@
 const express = require('express');
 const db = require('../database');
 const { verifyToken, requireRole } = require('../middleware/auth');
+const { cleanSkillList } = require('../utils/matcher');
 
 const router = express.Router();
 
 // POST /jobs  (recruiter only)
 router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
   const { title, company, location, type, skills, description } = req.body || {};
+  const cleanedSkills = cleanSkillList(skills).join(', ');
 
-  if (!title || !company || !skills || !description) {
+  if (!title || !company || !cleanedSkills || !description) {
     return res.status(400).json({ message: 'title, company, skills and description are required' });
   }
 
@@ -16,7 +18,7 @@ router.post('/', verifyToken, requireRole('recruiter'), (req, res) => {
     .prepare(
       'INSERT INTO jobs (title, company, location, type, skills, description, recruiter_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(title, company, location || null, type || null, skills, description, req.user.id);
+    .run(title, company, location || null, type || null, cleanedSkills, description, req.user.id);
 
   res.status(201).json({ message: 'Job posted', jobId: result.lastInsertRowid });
 });
@@ -144,12 +146,15 @@ router.put('/:id', verifyToken, requireRole('recruiter'), (req, res) => {
   }
 
   const body = req.body || {};
+  const cleanedBodySkills =
+    body.skills !== undefined ? cleanSkillList(body.skills).join(', ') : job.skills;
+
   const updated = {
     title: body.title !== undefined ? body.title : job.title,
     company: body.company !== undefined ? body.company : job.company,
     location: body.location !== undefined ? body.location : job.location,
     type: body.type !== undefined ? body.type : job.type,
-    skills: body.skills !== undefined ? body.skills : job.skills,
+    skills: cleanedBodySkills,
     description: body.description !== undefined ? body.description : job.description,
   };
 

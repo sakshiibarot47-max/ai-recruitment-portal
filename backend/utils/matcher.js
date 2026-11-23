@@ -5,18 +5,38 @@ function escapeRegex(text) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-// "- Figma, Adobe XD" or "- Figma\n- Adobe XD"  ->  ["figma", "adobe xd"]
-// A dash or bullet at the start of a skill is removed, so it never shows up as "- figma".
-function splitSkills(text) {
-  return String(text || '')
-    .split(/[,\n]/)
-    .map((s) => s.replace(/^[\s\-\u2022*\u00b7]+/, '').trim().toLowerCase())
+// Turns "- Figma,  React ,, * CSS" or a list with new lines into a clean list.
+// It removes bullets and dashes at the start ("- Figma" becomes "Figma"), spaces,
+// empty items and repeated skills. The capital letters are kept.
+function cleanSkillList(text) {
+  const list = String(text || '')
+    .split(/[,\n;]+/)
+    .map((s) =>
+      s
+        .trim()
+        .replace(/^([-–—•*·]+|\d+[.)])\s*/, '') // bullet, dash or "1." at the start
+        .replace(/[.;:]+$/, '')                 // punctuation at the end
+        .trim()
+    )
     .filter((s) => s.length > 0);
+
+  const seen = new Set();
+  return list.filter((s) => {
+    const key = s.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+// The same list in lowercase, used for matching
+function parseSkills(text) {
+  return cleanSkillList(text).map((s) => s.toLowerCase());
 }
 
 function calculateMatch(resumeText, jobSkills) {
   const text = (resumeText || '').toLowerCase();
-  const skills = splitSkills(jobSkills);
+  const skills = parseSkills(jobSkills);
 
   if (skills.length === 0) {
     return { score: 0, matched: [], missing: [] };
@@ -36,4 +56,4 @@ function calculateMatch(resumeText, jobSkills) {
   return { score, matched, missing };
 }
 
-module.exports = { calculateMatch, splitSkills };
+module.exports = { calculateMatch, cleanSkillList, parseSkills };

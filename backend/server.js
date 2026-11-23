@@ -50,6 +50,7 @@ app.use('/applications', applicationRoutes);
 // Profile & Recommendations & Saved Jobs Routes
 const profileRoutes = require('./routes/profile');
 app.use('/profile', profileRoutes);
+app.use('/profile', require('./routes/profileImport'));
 
 const recommendationsRoutes = require('./routes/recommendations');
 app.use('/recommendations', recommendationsRoutes);

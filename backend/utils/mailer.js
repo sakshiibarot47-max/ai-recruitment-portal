@@ -52,11 +52,9 @@ async function sendMail(options) {
   const filePath = path.join(previewDir, 'email-preview.html');
   fs.writeFileSync(filePath, htmlContent);
 
-  console.log('--------------------------------------------------');
   console.log('📧 Email Generated Successfully!');
   console.log('📂 Local Preview File saved at:');
   console.log(filePath);
-  console.log('--------------------------------------------------');
 
   return { messageId: 'local-' + Date.now() };
 }
