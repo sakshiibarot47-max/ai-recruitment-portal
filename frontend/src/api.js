@@ -1,419 +1,141 @@
+// All calls to the backend live in this one file.
+// Base address of the backend. Change it with VITE_API_URL in frontend/.env if needed.
+const BASE_URL = (import.meta.env && import.meta.env.VITE_API_URL) || 'http://localhost:5000'
 
-import axios from 'axios';
+// ---------- login session (token + user) ----------
+export function saveSession(token, user) {
+  localStorage.setItem('token', token)
+  localStorage.setItem('user', JSON.stringify(user))
+}
 
-// Live site ke liye .env me VITE_API_URL daalo (frontend/.env.example dekho)
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/+$/, '');
+export function getToken() {
+  return localStorage.getItem('token')
+}
 
-// Axios instance
-const apiClient = axios.create({
-  baseURL: API_URL,
-});
+export function getUser() {
+  try {
+    return JSON.parse(localStorage.getItem('user'))
+  } catch {
+    return null
+  }
+}
 
-// Add JWT token automatically to protected requests
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('hireai_token');
+export function logout() {
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
+}
 
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+// ---------- one helper that every call uses ----------
+async function request(path, { method = 'GET', body, isForm = false, auth = true } = {}) {
+  const headers = {}
+  const token = getToken()
 
-    return config;
+  if (auth && token) headers.Authorization = 'Bearer ' + token
+  if (body && !isForm) headers['Content-Type'] = 'application/json'
+
+  let res
+  try {
+    res = await fetch(BASE_URL + path, {
+      method,
+      headers,
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
+    })
+  } catch {
+    throw new Error('Cannot reach the server. Is the backend running?')
+  }
+
+  let data = null
+  try {
+    data = await res.json()
+  } catch {
+    // reply had no JSON
+  }
+
+  if (!res.ok) {
+    // token expired or invalid: clear the saved login
+    if (res.status === 401 && auth && token) logout()
+    throw new Error((data && data.message) || 'Something went wrong')
+  }
+  return data
+}
+
+// ---------- the API functions the pages will call ----------
+export const api = {
+  // Auth
+  register: (name, email, password, role) =>
+    request('/auth/register', { method: 'POST', body: { name, email, password, role }, auth: false }),
+  login: (email, password) =>
+    request('/auth/login', { method: 'POST', body: { email, password }, auth: false }),
+
+  // Jobs (everyone)
+  getJobs: (filters = {}) => {
+    const q = new URLSearchParams()
+    Object.entries(filters).forEach(([key, value]) => value && q.append(key, value))
+    const text = q.toString()
+    return request('/jobs' + (text ? '?' + text : ''), { auth: false })
   },
-  (error) => Promise.reject(error)
-);
+  getJob: (id) => request('/jobs/' + id, { auth: false }),
 
-// Handle backend errors and expired login sessions
-apiClient.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      const token = localStorage.getItem('hireai_token');
+  // Candidate
+  applyToJob: (jobId, file) => {
+    const form = new FormData()
+    form.append('resume', file) // the field name must be exactly "resume"
+    return request('/jobs/' + jobId + '/apply', { method: 'POST', body: form, isForm: true })
+  },
+  myApplications: () => request('/my/applications'),
 
-      if (token) {
-        localStorage.removeItem('hireai_token');
-        localStorage.removeItem('hireai_user');
+  // Recruiter
+  createJob: (job) => request('/jobs', { method: 'POST', body: job }),
+  getApplicants: (jobId) => request('/jobs/' + jobId + '/applicants'),
+  updateStatus: (applicationId, status) =>
+    request('/applications/' + applicationId + '/status', { method: 'PUT', body: { status } }),
 
-        if (window.location.pathname !== '/') {
-          window.location.assign('/');
-        }
-      }
-    }
+  // ----- Interviews -----
+  // data: { applicationId, scheduledAt: "2026-11-25 14:30", mode: "Online" or "In-person", location, notes }
+  scheduleInterview: (data) => request('/interviews', { method: 'POST', body: data }),
+  recruiterInterviews: () => request('/interviews'),
+  myInterviews: () => request('/interviews/my'),
 
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      'Something went wrong. Please try again.';
+  // ----- Notifications (candidate and recruiter) -----
+  // Returns { unreadCount, notifications: [...] }
+  getNotifications: (unreadOnly = false) =>
+    request('/notifications' + (unreadOnly ? '?unread=true' : '')),
+  markNotificationRead: (id) => request('/notifications/' + id + '/read', { method: 'PUT' }),
+  markAllNotificationsRead: () => request('/notifications/read-all', { method: 'PUT' }),
 
-    const requestError = new Error(message);
-    requestError.status = error.response?.status;
-    requestError.data = error.response?.data; // needsVerification, retryAfter jaisi cheezein
+  // ----- Candidate extras -----
+  withdrawApplication: (applicationId) => request('/my/applications/' + applicationId, { method: 'DELETE' }),
+  // Returns suggestions only. It does NOT change the profile: show the suggestions in the form,
+  // let the user edit them, then save with saveProfile.
+  importResume: (file) => {
+    const form = new FormData()
+    form.append('resume', file)
+    return request('/profile/import-resume', { method: 'POST', body: form, isForm: true })
+  },
+  getProfile: () => request('/profile/me'),
+  saveProfile: (fields) => request('/profile/me', { method: 'PUT', body: fields }),
 
-    return Promise.reject(requestError);
-  }
-);
-
-// Logged-in user (saved at login)
-export const getUser = () => {
-  try {
-    return JSON.parse(localStorage.getItem('hireai_user'));
-  } catch {
-    return null;
-  }
-};
-
-// Backend me route na ho (404/405) to feature browser storage par chalta hai
-const isMissingRoute = (error) => error?.status === 404 || error?.status === 405;
-
-const localKey = (name) => `hireai_${name}_${getUser()?.id ?? 'guest'}`;
-
-const readLocal = (name, fallback) => {
-  try {
-    const value = JSON.parse(localStorage.getItem(localKey(name)));
-    return value ?? fallback;
-  } catch {
-    return fallback;
-  }
-};
-
-const writeLocal = (name, value) => {
-  try {
-    localStorage.setItem(localKey(name), JSON.stringify(value));
-  } catch {
-    throw new Error('Could not save on this device. Browser storage is full or blocked.');
-  }
-};
-
-// AUTH APIs
-export const register = async (userData) => {
-  const response = await apiClient.post('/auth/register', {
-    ...userData,
-    role: userData.role?.toLowerCase(),
-  });
-
-  return response.data;
-};
-
-export const login = async (credentials) => {
-  const response = await apiClient.post('/auth/login', credentials);
-
-  return response.data;
-};
-
-export const verifyOtp = async (data) => (await apiClient.post('/auth/verify-otp', data)).data;
-
-export const resendOtp = async (data) => (await apiClient.post('/auth/resend-otp', data)).data;
-
-export const forgotPassword = async (data) => (await apiClient.post('/auth/forgot-password', data)).data;
-
-export const verifyResetOtp = async (data) => (await apiClient.post('/auth/verify-reset-otp', data)).data;
-
-export const resetPassword = async (data) => (await apiClient.post('/auth/reset-password', data)).data;
-
-// JOB APIs
-export const getJobs = async (filters = {}) => {
-  const response = await apiClient.get('/jobs', {
-    params: {
-      search: filters.search || '',
-      location: filters.location || '',
-      type: filters.type || '',
-    },
-  });
-
-  return response.data;
-};
-
-export const getJob = async (jobId) => {
-  const response = await apiClient.get(`/jobs/${jobId}`);
-  return response.data;
-};
-
-// APPLICATION APIs
-export const applyToJob = async (jobId, resumeFile) => {
-  const formData = new FormData();
-  formData.append('resume', resumeFile);
-
-  const response = await apiClient.post(
-    `/jobs/${jobId}/apply`,
-    formData
-  );
-
-  return response.data;
-};
-
-export const myApplications = async () => {
-  const response = await apiClient.get('/my/applications');
-  return response.data;
-};
-
-export const withdrawApplication = async (applicationId) => {
-  // Backend route: DELETE /applications/:id  (older docs mention /my/applications/:id)
-  const paths = [
-    `/applications/${applicationId}`,
-    `/my/applications/${applicationId}`
-  ];
-
-  let lastError = null;
-
-  for (const path of paths) {
+  // Opens the candidate's PDF resume in a new tab (recruiter only).
+  // A plain link cannot send the login token, so we fetch the file and open it as a blob.
+  openResume: async (applicationId) => {
+    let res
     try {
-      const response = await apiClient.delete(path);
-      return response.data;
-    } catch (error) {
-      // Real "not found" / permission errors must be shown as they are
-      if (!isMissingRoute(error) || !/^Route not found/i.test(error.message)) {
-        throw error;
+      res = await fetch(BASE_URL + '/applications/' + applicationId + '/resume', {
+        headers: { Authorization: 'Bearer ' + getToken() },
+      })
+    } catch {
+      throw new Error('Cannot reach the server. Is the backend running?')
+    }
+    if (!res.ok) {
+      let message = 'Could not open the resume'
+      try {
+        message = (await res.json()).message || message
+      } catch {
+        // no JSON in the reply
       }
-
-      lastError = error;
+      throw new Error(message)
     }
-  }
-
-  throw new Error(
-    'Withdrawing an application is not available yet. Please contact the recruiter.',
-    { cause: lastError }
-  );
-};
-
-// JOBS WITH PAGINATION (reads X-Total-Count and X-Total-Pages headers)
-export const getJobsPage = async (filters = {}) => {
-  const response = await apiClient.get('/jobs', {
-    params: {
-      search: filters.search || '',
-      location: filters.location || '',
-      type: filters.type || '',
-      sort: filters.sort || undefined,
-      page: filters.page || 1,
-      limit: filters.limit || 6,
-    },
-  });
-
-  const jobs = Array.isArray(response.data) ? response.data : [];
-  const total = Number(response.headers['x-total-count']);
-  const totalPages = Number(response.headers['x-total-pages']);
-
-  return {
-    jobs,
-    total: Number.isFinite(total) ? total : jobs.length,
-    totalPages: Number.isFinite(totalPages) && totalPages > 0 ? totalPages : 1,
-  };
-};
-
-// CANDIDATE PROFILE + RECOMMENDATIONS
-export const getMyProfile = async () => {
-  const response = await apiClient.get('/profile/me');
-  return response.data;
-};
-
-// Reads a PDF resume and returns { extractedData: { skills, education, ... } }
-export const importProfileFromResume = async (resumeFile) => {
-  const formData = new FormData();
-  formData.append('resume', resumeFile);
-
-  const response = await apiClient.post('/profile/auto-fill-resume', formData);
-  return response.data;
-};
-
-export const updateMyProfile = async (profile) => {
-  const response = await apiClient.put('/profile/me', profile);
-  return response.data;
-};
-
-export const getRecommendedJobs = async () => {
-  const response = await apiClient.get('/recommendations/jobs');
-  return response.data;
-};
-
-// RECRUITER ANALYTICS
-export const getRecruiterStats = async () => {
-  const response = await apiClient.get('/recruiter/stats');
-  return response.data;
-};
-
-// CANDIDATE DASHBOARD STATS
-export const getCandidateStats = async () => {
-  const response = await apiClient.get('/candidate/stats');
-  return response.data;
-};
-
-// SAVED JOB APIs (server na ho to isi browser me save hota hai)
-export const getSavedJobs = async () => {
-  try {
-    const response = await apiClient.get('/saved-jobs');
-    return response.data;
-  } catch (error) {
-    if (!isMissingRoute(error)) throw error;
-
-    return readLocal('saved_jobs', []);
-  }
-};
-
-export const saveJob = async (jobId) => {
-  try {
-    const response = await apiClient.post(`/saved-jobs/${jobId}`);
-    return response.data;
-  } catch (error) {
-    if (!isMissingRoute(error)) throw error;
-
-    const job = await getJob(jobId);
-    const saved = readLocal('saved_jobs', []);
-
-    if (!saved.some((item) => String(item.id) === String(jobId))) {
-      writeLocal('saved_jobs', [job, ...saved]);
-    }
-
-    return { message: 'Job saved' };
-  }
-};
-
-export const removeSavedJob = async (jobId) => {
-  try {
-    const response = await apiClient.delete(`/saved-jobs/${jobId}`);
-    return response.data;
-  } catch (error) {
-    if (!isMissingRoute(error)) throw error;
-
-    const saved = readLocal('saved_jobs', []);
-
-    writeLocal(
-      'saved_jobs',
-      saved.filter((item) => String(item.id) !== String(jobId))
-    );
-
-    return { message: 'Job removed' };
-  }
-};
-
-// CANDIDATE RESUME BUILDER APIs
-
-// Saved resume load karna (server na ho to isi browser se)
-export const getCandidateResume = async () => {
-  try {
-    const response = await apiClient.get('/candidate-resume');
-    return response.data;
-  } catch (error) {
-    if (!isMissingRoute(error)) throw error;
-
-    return { resume: readLocal('resume', null) };
-  }
-};
-
-// Resume save/update karna
-export const saveCandidateResume = async (resumeData) => {
-  try {
-    const response = await apiClient.put('/candidate-resume', resumeData);
-    return response.data;
-  } catch (error) {
-    if (!isMissingRoute(error)) throw error;
-
-    writeLocal('resume', resumeData);
-
-    return { message: 'Resume saved on this device.' };
-  }
-};
-
-// CANDIDATE INTERVIEW API
-export const getMyInterviews = async () => {
-  const response = await apiClient.get('/interviews/my');
-  return response.data;
-};
-
-// RECRUITER APIs (for Kinjal's pages)
-export const createJob = async (jobData) => {
-  const response = await apiClient.post('/jobs', jobData);
-  return response.data;
-};
-
-export const updateJob = async (jobId, jobData) => {
-  const response = await apiClient.put(`/jobs/${jobId}`, jobData);
-  return response.data;
-};
-
-export const deleteJob = async (jobId) => {
-  const response = await apiClient.delete(`/jobs/${jobId}`);
-  return response.data;
-};
-
-export const getApplicants = async (jobId) => {
-  const response = await apiClient.get(`/jobs/${jobId}/applicants`);
-  return response.data;
-};
-
-export const updateStatus = async (applicationId, status) => {
-  const response = await apiClient.put(
-    `/applications/${applicationId}/status`,
-    { status }
-  );
-
-  return response.data;
-};
-
-export const getRecruiterInterviews = async () => {
-  const response = await apiClient.get('/interviews');
-  return response.data;
-};
-
-export const createInterview = async (interviewData) => {
-  const response = await apiClient.post('/interviews', interviewData);
-  return response.data;
-};
-
-export const updateInterview = async (interviewId, interviewData) => {
-  const response = await apiClient.put(`/interviews/${interviewId}`, interviewData);
-  return response.data;
-};
-
-// OPEN RESUME (Recruiter)
-// Window click ke time hi khulti hai taaki popup blocker na roke
-export const openResume = async (applicationId) => {
-  const resumeWindow = window.open('', '_blank');
-
-  try {
-    const response = await apiClient.get(
-      `/applications/${applicationId}/resume`,
-      { responseType: 'blob' }
-    );
-
-    const file = new Blob([response.data], { type: 'application/pdf' });
-    const fileURL = URL.createObjectURL(file);
-
-    if (resumeWindow) {
-      resumeWindow.location.href = fileURL;
-    } else {
-      window.open(fileURL, '_blank');
-    }
-
-    setTimeout(() => URL.revokeObjectURL(fileURL), 60000);
-  } catch (error) {
-    if (resumeWindow) resumeWindow.close();
-
-    if (error.status === 404) {
-      throw new Error('Resume file was not found.', { cause: error });
-    }
-
-    if (error.status === 403) {
-      throw new Error('You can only open resumes for your own jobs.', { cause: error });
-    }
-
-    throw error;
-  }
-};
-
-// NOTIFICATIONS
-export const getNotifications = async () => {
-  const response = await apiClient.get('/notifications');
-  return response.data;
-};
-
-export const markNotificationRead = async (id) => {
-  const response = await apiClient.put(`/notifications/${id}/read`);
-  return response.data;
-};
-
-export const markAllNotificationsRead = async () => {
-  const response = await apiClient.put('/notifications/read-all');
-  return response.data;
-};
-
-// Export axios instance if required
-export default apiClient;
+    const blob = await res.blob()
+    window.open(URL.createObjectURL(blob), '_blank')
+  },
+}
