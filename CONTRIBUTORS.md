@@ -26,7 +26,6 @@ Relevant files:
 
 Note: Historical Git commits may show a shared Git author account because both contributors worked using the same laptop and GitHub setup. This document records the agreed project work division; it does not change historical commit authorship.
 
-
 ## 3. Sakshi Hiren Barot
 
 **Role:** Project Lead, Full-Stack & Backend Development, Deployment & QA Integration
@@ -36,3 +35,12 @@ Responsibilities:
 - Authentication, JWT security, AI resume parsing, and skill-cleaning (`cleanSkillList`) logic
 - Cloud deployment and environment configuration on Render (`ai-recruitment-portal` & `hireai-backend`)
 - Backend API testing (Postman), codebase audit, and final project report & test plan consolidation
+
+ ## 4. Khushi Chandraprakash Oza
+
+**Role:** Full-Stack Developer Intern, Candidate Module & QA Testing
+
+Responsibilities:
+- Candidate workflow APIs and features (job applications, saved jobs, notifications, and resume import)
+- Automated backend test suite (`backend/test-api.js`) covering PDF apply, duplicate handling (409), invalid files (400), resume import, saved jobs, and notifications
+- Postman API testing, candidate portal demo verification, and internship logbook & backend documentation
