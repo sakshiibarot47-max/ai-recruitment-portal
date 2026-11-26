@@ -36,11 +36,11 @@ Responsibilities:
 - Cloud deployment and environment configuration on Render (`ai-recruitment-portal` & `hireai-backend`)
 - Backend API testing (Postman), codebase audit, and final project report & test plan consolidation
 
- ## 4. Khushi Chandraprakash Oza
+ ## 4. Oza Khushi Chandraprakash
 
-**Role:** Full-Stack Developer Intern, Candidate Module & QA Testing
+**Role:** Full-Stack Developer Intern (Backend APIs, Candidate Workflows & QA)
 
 Responsibilities:
-- Candidate workflow APIs and features (job applications, saved jobs, notifications, and resume import)
-- Automated backend test suite (`backend/test-api.js`) covering PDF apply, duplicate handling (409), invalid files (400), resume import, saved jobs, and notifications
-- Postman API testing, candidate portal demo verification, and internship logbook & backend documentation
+- Built and tested candidate workflow APIs and features (job applications, saved jobs, notifications, and resume import)
+- Developed automated API test suite (`backend/test-api.js`) covering validation, duplicate/error handling (400/409), and core user flows
+- Verified endpoints in Postman, validated candidate portal flows, and maintained internship & technical documentation
