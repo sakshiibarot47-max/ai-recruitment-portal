@@ -18,6 +18,7 @@ const router = express.Router();
 // true (default): naya account OTP se verify hone par hi chalta hai.
 // false: purana tareeka (sirf jab naya frontend ready na ho). Live site par kabhi false mat rakhna.
 const REQUIRE_VERIFICATION = process.env.REQUIRE_VERIFICATION !== 'false';
+const HAS_EMAIL_SMTP = Boolean(process.env.SMTP_HOST);
 
 // Galat email par bhi utna hi time lage jitna sahi par lagta hai (taaki time se pata na chale)
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
@@ -152,13 +153,18 @@ router.post('/register', async (req, res) => {
     db.prepare('DELETE FROM users WHERE id = ?').run(row.id);
   }
 
+  const shouldVerifyImmediately = !REQUIRE_VERIFICATION || !HAS_EMAIL_SMTP;
   const hashedPassword = bcrypt.hashSync(password, 10);
   const inserted = db
     .prepare('INSERT INTO users (name, email, phone, password, role, company_name, is_verified) VALUES (?, ?, ?, ?, ?, ?, ?)')
-    .run(String(name).trim(), email, phone, hashedPassword, role, companyName, REQUIRE_VERIFICATION ? 0 : 1);
+    .run(String(name).trim(), email, phone, hashedPassword, role, companyName, shouldVerifyImmediately ? 1 : 0);
 
-  if (!REQUIRE_VERIFICATION) {
-    return res.status(201).json({ message: 'Registered successfully', userId: inserted.lastInsertRowid });
+  if (shouldVerifyImmediately) {
+    return res.status(201).json({
+      message: 'Registered successfully',
+      userId: inserted.lastInsertRowid,
+      needsVerification: false,
+    });
   }
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(inserted.lastInsertRowid);
